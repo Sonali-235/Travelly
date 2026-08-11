@@ -67,7 +67,7 @@ export async function createOrder(params: {
     .single();
 
   if (error) throw new Error(`Could not create order: ${error.message}`);
-  return rowToOrder(data as OrderRow);
+  return rowToOrder(data as unknown as OrderRow);
 }
 
 export async function getOrderById(id: string): Promise<StoredOrder | null> {
@@ -80,7 +80,7 @@ export async function getOrderById(id: string): Promise<StoredOrder | null> {
 
   if (error) throw new Error(`Could not load order: ${error.message}`);
   if (!data) return null;
-  return rowToOrder(data as OrderRow);
+  return rowToOrder(data as unknown as OrderRow);
 }
 
 export async function updateOrderStatus(
@@ -105,7 +105,7 @@ export async function getOrdersByUserId(userId: string): Promise<StoredOrder[]> 
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(`Could not load trips: ${error.message}`);
-  return (data as OrderRow[]).map(rowToOrder);
+  return (data as unknown as OrderRow[]).map(rowToOrder);
 }
 
 export async function getOrdersByPhone(phone: string): Promise<StoredOrder[]> {
@@ -117,7 +117,7 @@ export async function getOrdersByPhone(phone: string): Promise<StoredOrder[]> {
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(`Could not load trips: ${error.message}`);
-  return (data as OrderRow[]).map(rowToOrder);
+  return (data as unknown as OrderRow[]).map(rowToOrder);
 }
 
 export async function listAllOrders(): Promise<StoredOrder[]> {
@@ -129,5 +129,5 @@ export async function listAllOrders(): Promise<StoredOrder[]> {
     .limit(200);
 
   if (error) throw new Error(`Could not load orders: ${error.message}`);
-  return (data as OrderRow[]).map(rowToOrder);
+  return (data as unknown as OrderRow[]).map(rowToOrder);
 }
