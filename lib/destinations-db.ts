@@ -33,7 +33,7 @@ export async function listDestinations(): Promise<Destination[]> {
     .order("name", { ascending: true });
 
   if (error) throw new Error(`Could not load destinations: ${error.message}`);
-  return (data as DestinationRow[]).map(rowToDestination);
+  return (data as unknown as DestinationRow[]).map(rowToDestination);
 }
 
 export async function getDestinationById(id: string): Promise<Destination | null> {
@@ -46,7 +46,7 @@ export async function getDestinationById(id: string): Promise<Destination | null
 
   if (error) throw new Error(`Could not load destination: ${error.message}`);
   if (!data) return null;
-  return rowToDestination(data as DestinationRow);
+  return rowToDestination(data as unknown as DestinationRow);
 }
 
 export async function upsertDestination(destination: Destination): Promise<void> {
