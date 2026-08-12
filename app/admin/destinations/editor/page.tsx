@@ -122,17 +122,15 @@ function EditorContent() {
 
   if (loading) {
     return (
-      <>
-        <AdminHeader />
-        <main className="mx-auto max-w-3xl px-5 py-10 text-sm text-muted">Loading…</main>
-      </>
+      <AdminHeader>
+        <p className="text-sm text-muted">Loading…</p>
+      </AdminHeader>
     );
   }
 
   return (
-    <>
-      <AdminHeader />
-      <main className="mx-auto max-w-3xl px-5 py-10 pb-24">
+    <AdminHeader>
+      <div className="pb-24">
         <h1 className="font-display text-2xl font-semibold text-ink">
           {isNew ? "Add destination" : `Edit ${name || editingId}`}
         </h1>
@@ -323,8 +321,8 @@ function EditorContent() {
             {saving ? "Saving…" : "Save destination"}
           </button>
         </form>
-      </main>
-    </>
+      </div>
+    </AdminHeader>
   );
 }
 
