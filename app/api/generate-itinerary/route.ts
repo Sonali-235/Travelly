@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateItineraryWithClaude } from "@/lib/anthropic";
+import { generateItineraryWithGemini } from "@/lib/gemini";
 import { getDestinationById } from "@/lib/destinations-db";
 import { getOrderById, updateOrderStatus } from "@/lib/orders-db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     await updateOrderStatus(order.id, "ai_processing");
 
-    const itinerary = await generateItineraryWithClaude(destination, order.tripRequest);
+    const itinerary = await generateItineraryWithGemini(destination, order.tripRequest);
 
     await updateOrderStatus(order.id, "ready", itinerary);
 

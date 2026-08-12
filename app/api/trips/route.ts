@@ -3,6 +3,8 @@ import { listDestinations } from "@/lib/destinations-db";
 import { getOrdersByUserId } from "@/lib/orders-db";
 import { getCurrentUser } from "@/lib/supabase-server";
 
+export const dynamic = "force-dynamic";
+
 // Real, session-based "my trips" — replaces the earlier phone-number-only
 // lookup. Only returns orders that belong to the logged-in user.
 export async function GET() {

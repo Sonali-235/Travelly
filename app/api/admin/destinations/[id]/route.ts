@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteDestination } from "@/lib/destinations-db";
 
+export const dynamic = "force-dynamic";
+
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     await deleteDestination(params.id);

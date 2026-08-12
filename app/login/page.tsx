@@ -2,7 +2,6 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Header } from "@/components/Header";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export default function LoginPage() {
@@ -66,10 +65,10 @@ function LoginContent() {
   }
 
   return (
-    <>
-      <Header />
-      <main className="mx-auto flex max-w-sm flex-col px-5 pb-24 pt-10">
-        <h1 className="font-display text-2xl font-semibold text-ink">
+    <main className="flex min-h-screen items-center justify-center bg-canvas px-5">
+      <div className="w-full max-w-sm rounded-xl2 border border-line bg-surface p-6 shadow-soft">
+        <p className="font-display text-lg font-semibold text-ink">Travelly</p>
+        <h1 className="mt-3 font-display text-2xl font-semibold text-ink">
           {mode === "signin" ? "Log in" : "Create your account"}
         </h1>
         <p className="mt-1 text-sm text-muted">
@@ -80,7 +79,7 @@ function LoginContent() {
 
         <button
           onClick={handleGoogleAuth}
-          className="mt-6 flex items-center justify-center gap-2 rounded-full border border-line bg-surface px-5 py-2.5 text-sm font-medium text-ink shadow-soft transition hover:border-brand/40"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-full border border-line bg-surface px-5 py-2.5 text-sm font-medium text-ink transition hover:border-brand/40"
         >
           <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
             <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.7-.4-4.5z"/>
@@ -138,11 +137,11 @@ function LoginContent() {
             setError("");
             setMessage("");
           }}
-          className="mt-4 text-center text-sm text-muted hover:text-brand"
+          className="mt-4 w-full text-center text-sm text-muted hover:text-brand"
         >
           {mode === "signin" ? "New here? Create an account" : "Already have an account? Log in"}
         </button>
-      </main>
-    </>
+      </div>
+    </main>
   );
 }

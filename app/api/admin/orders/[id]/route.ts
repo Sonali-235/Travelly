@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { updateOrderStatus } from "@/lib/orders-db";
 import { OrderRecord } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 const VALID_STATUSES: OrderRecord["status"][] = [
   "awaiting_payment",
   "payment_successful",

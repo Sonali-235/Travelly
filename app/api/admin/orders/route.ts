@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { listAllOrders } from "@/lib/orders-db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const orders = await listAllOrders();

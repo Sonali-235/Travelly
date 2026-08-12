@@ -15,54 +15,51 @@ export default async function AdminDashboard() {
     .reduce((sum, o) => sum + (o.plan === "plus" ? 99 : 49), 0);
 
   return (
-    <>
-      <AdminHeader />
-      <main className="mx-auto max-w-4xl px-5 py-10">
-        <h1 className="font-display text-2xl font-semibold text-ink">Dashboard</h1>
+    <AdminHeader>
+      <h1 className="font-display text-2xl font-semibold text-ink">Dashboard</h1>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <StatCard label="Destinations" value={destinations.length} />
-          <StatCard label="Total orders" value={orders.length} />
-          <StatCard label="Completed itineraries" value={readyOrders} />
-        </div>
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <StatCard label="Destinations" value={destinations.length} />
+        <StatCard label="Total orders" value={orders.length} />
+        <StatCard label="Completed itineraries" value={readyOrders} />
+      </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <StatCard label="Revenue collected (est.)" value={`₹${totalRevenue}`} />
-          <StatCard
-            label="Destinations still using placeholder data"
-            value={sampleDataCount}
-            warn={sampleDataCount > 0}
-          />
-        </div>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <StatCard label="Revenue collected (est.)" value={`₹${totalRevenue}`} />
+        <StatCard
+          label="Destinations still using placeholder data"
+          value={sampleDataCount}
+          warn={sampleDataCount > 0}
+        />
+      </div>
 
-        {sampleDataCount > 0 && (
-          <div className="mt-6 rounded-xl2 border border-warn-border bg-warn-bg p-4 text-sm text-warn">
-            {sampleDataCount} destination{sampleDataCount > 1 ? "s" : ""} still{" "}
-            {sampleDataCount > 1 ? "have" : "has"} placeholder verified data. Real customers
-            shouldn't see these yet —{" "}
-            <Link href="/admin/destinations" className="font-medium underline">
-              fix them in Destinations
-            </Link>
-            .
-          </div>
-        )}
-
-        <div className="mt-8 flex gap-3">
-          <Link
-            href="/admin/destinations"
-            className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-dark"
-          >
-            Manage destinations
+      {sampleDataCount > 0 && (
+        <div className="mt-6 rounded-xl2 border border-warn-border bg-warn-bg p-4 text-sm text-warn">
+          {sampleDataCount} destination{sampleDataCount > 1 ? "s" : ""} still{" "}
+          {sampleDataCount > 1 ? "have" : "has"} placeholder verified data. Real customers
+          shouldn't see these yet —{" "}
+          <Link href="/admin/destinations" className="font-medium underline">
+            fix them in Destinations
           </Link>
-          <Link
-            href="/admin/orders"
-            className="rounded-full border border-line px-5 py-2.5 text-sm font-medium text-ink hover:border-brand/40"
-          >
-            View orders
-          </Link>
+          .
         </div>
-      </main>
-    </>
+      )}
+
+      <div className="mt-8 flex gap-3">
+        <Link
+          href="/admin/destinations"
+          className="rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-dark"
+        >
+          Manage destinations
+        </Link>
+        <Link
+          href="/admin/orders"
+          className="rounded-full border border-line px-5 py-2.5 text-sm font-medium text-ink hover:border-brand/40"
+        >
+          View orders
+        </Link>
+      </div>
+    </AdminHeader>
   );
 }
 

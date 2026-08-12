@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { listDestinations } from "@/lib/destinations-db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const destinations = await listDestinations();
