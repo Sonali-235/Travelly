@@ -119,5 +119,6 @@ cp .env.local.example .env.local   # then fill in your real keys
 npm run dev
 ```
 
+
 Then open http://localhost:3000 — and http://localhost:3000/admin for the
 admin panel.
