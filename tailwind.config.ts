@@ -9,14 +9,14 @@ const config: Config = {
     extend: {
       colors: {
         surface: "#FFFFFF",
-        canvas: "#FAFAFA",
-        line: "#E5E7EB",
+        canvas: "#EEF1F6",
+        line: "#E2E6EE",
         ink: "#111827",
-        muted: "#6B7280",
+        muted: "#667085",
         brand: {
-          DEFAULT: "#2563EB",
-          dark: "#1D4ED8",
-          light: "#EFF4FF",
+          DEFAULT: "#33547E",
+          dark: "#25405F",
+          light: "#E9EDF5",
         },
         verified: {
           DEFAULT: "#16A34A",
@@ -35,8 +35,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        display: ["var(--font-fraunces)", "serif"],
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        display: ["Fraunces", "serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
       },
       boxShadow: {
         soft: "0 1px 2px rgba(17,24,39,0.04), 0 8px 24px rgba(17,24,39,0.06)",
