@@ -66,7 +66,7 @@ function EditorContent() {
         setBestSeason(found.bestSeason);
         setAccentEmoji(found.accentEmoji);
         setOverview(found.overview);
-        setVerified({ ...EMPTY_VERIFIED, ...found.verified } as VerifiedState);
+        setVerified({ ...EMPTY_VERIFIED, ...found.verified } as unknown as VerifiedState);
       })
       .catch(() => setError("Could not load destination."))
       .finally(() => setLoading(false));
