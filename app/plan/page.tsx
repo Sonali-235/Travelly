@@ -50,7 +50,7 @@ export default function PlanPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/destinations")
+    fetch("/api/destinations", { cache: "no-store" })
       .then((res) => {
         if (!res.ok) throw new Error("Could not load destinations.");
         return res.json();

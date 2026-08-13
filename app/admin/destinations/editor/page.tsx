@@ -51,7 +51,7 @@ function EditorContent() {
 
   useEffect(() => {
     if (isNew) return;
-    fetch("/api/admin/destinations")
+    fetch("/api/admin/destinations", { cache: "no-store" })
       .then((res) => res.json())
       .then((all: Destination[]) => {
         const found = all.find((d) => d.id === editingId);

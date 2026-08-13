@@ -56,7 +56,7 @@ function ItineraryContent() {
       if (!orderId) return;
       if (!silent) setStatus("loading");
       try {
-        const res = await fetch(`/api/orders/${orderId}`);
+        const res = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error || "Could not load that trip.");

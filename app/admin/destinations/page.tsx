@@ -12,7 +12,7 @@ export default function AdminDestinationsPage() {
 
   function load() {
     setLoading(true);
-    fetch("/api/admin/destinations")
+    fetch("/api/admin/destinations", { cache: "no-store" })
       .then((res) => res.json())
       .then(setDestinations)
       .catch(() => setError("Could not load destinations."))

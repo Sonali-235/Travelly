@@ -3,6 +3,8 @@ import { getDestinationById } from "@/lib/destinations-db";
 import { deleteOrder, getOrderById } from "@/lib/orders-db";
 import { getCurrentUser } from "@/lib/supabase-server";
 
+const NO_STORE_HEADERS = { "Cache-Control": "no-store, must-revalidate" };
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const order = await getOrderById(params.id);
@@ -20,17 +22,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "Destination not found." }, { status: 404 });
     }
 
-    return NextResponse.json({
-      id: order.id,
-      status: order.status,
-      plan: order.plan,
-      customerName: order.customer.name,
-      tripRequest: order.tripRequest,
-      itinerary: order.itinerary,
-      regenerationsUsed: order.regenerationsUsed,
-      destination,
-      createdAt: order.createdAt,
-    });
+    return NextResponse.json(
+      {
+        id: order.id,
+        status: order.status,
+        plan: order.plan,
+        customerName: order.customer.name,
+        tripRequest: order.tripRequest,
+        itinerary: order.itinerary,
+        regenerationsUsed: order.regenerationsUsed,
+        destination,
+        createdAt: order.createdAt,
+      },
+      { headers: NO_STORE_HEADERS }
+    );
   } catch (err) {
     console.error(err);
     return NextResponse.json(

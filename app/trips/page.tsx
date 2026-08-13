@@ -21,7 +21,7 @@ export default function TripsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   function loadTrips() {
-    fetch("/api/trips")
+    fetch("/api/trips", { cache: "no-store" })
       .then((res) => res.json())
       .then(setTrips)
       .finally(() => setLoading(false));
@@ -63,6 +63,8 @@ export default function TripsPage() {
       <main className="mx-auto max-w-xl px-5 pb-24">
         <h1 className="mt-8 font-display text-2xl font-semibold text-ink">My trips</h1>
         <p className="mt-1 text-sm text-muted">Every trip you've paid for, in one place.</p>
+
+        {loggedIn === null && <p className="mt-6 text-sm text-muted">Checking your login…</p>}
 
         {loggedIn === false && (
           <div className="mt-6 rounded-xl2 border border-line bg-surface p-5 text-center shadow-soft">

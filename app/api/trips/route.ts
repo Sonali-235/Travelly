@@ -3,6 +3,8 @@ import { listDestinations } from "@/lib/destinations-db";
 import { getOrdersByUserId } from "@/lib/orders-db";
 import { getCurrentUser } from "@/lib/supabase-server";
 
+const NO_STORE_HEADERS = { "Cache-Control": "no-store, must-revalidate" };
+
 export const dynamic = "force-dynamic";
 
 // Real, session-based "my trips" — replaces the earlier phone-number-only
@@ -29,7 +31,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(summaries);
+    return NextResponse.json(summaries, { headers: NO_STORE_HEADERS });
   } catch (err) {
     console.error(err);
     return NextResponse.json(

@@ -53,7 +53,7 @@ export default function CheckoutPage() {
     const parsedTrip = JSON.parse(raw) as TripRequest;
     setTrip(parsedTrip);
 
-    fetch("/api/destinations")
+    fetch("/api/destinations", { cache: "no-store" })
       .then((res) => res.json())
       .then((data: Destination[]) => {
         const found = data.find((d) => d.id === parsedTrip.destinationId);

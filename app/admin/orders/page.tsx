@@ -23,7 +23,7 @@ export default function AdminOrdersPage() {
 
   function load() {
     setLoading(true);
-    fetch("/api/admin/orders")
+    fetch("/api/admin/orders", { cache: "no-store" })
       .then((res) => res.json())
       .then(setOrders)
       .finally(() => setLoading(false));
