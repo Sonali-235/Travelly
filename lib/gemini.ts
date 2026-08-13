@@ -52,9 +52,13 @@ salesy. estimatedBudget amounts must be clearly labelled as rough AI estimates,
 never stated as exact verified prices.`;
 }
 
-function buildUserPrompt(destination: Destination, trip: TripRequest): string {
+function buildUserPrompt(destination: Destination, trip: TripRequest, regenerationReason?: string): string {
   const attractionNames = destination.verified.attractions.map((a) => a.name).join(", ");
   const foodNames = destination.verified.localFood.join(", ");
+
+  const reasonBlock = regenerationReason
+    ? `\nThe traveler asked for this itinerary to be regenerated with this specific feedback — prioritize addressing it: "${regenerationReason}"\n`
+    : "";
 
   return `Destination: ${destination.name}, ${destination.state}
 Best season note: ${destination.bestSeason}
@@ -68,7 +72,7 @@ Travel mode: ${trip.travelMode}
 Must-visit places: ${trip.mustVisit || "none specified"}
 Places to avoid: ${trip.placesToAvoid || "none specified"}
 Additional preferences: ${trip.additionalPreferences || "none specified"}
-
+${reasonBlock}
 Known verified attractions to weave in by name where relevant (do not invent others
 outside this list unless clearly generic, e.g. "a local market"): ${attractionNames}
 Known local food to reference by name: ${foodNames}
@@ -78,7 +82,8 @@ Write a ${trip.days}-day itinerary as the JSON object described in your instruct
 
 export async function generateItineraryWithGemini(
   destination: Destination,
-  trip: TripRequest
+  trip: TripRequest,
+  regenerationReason?: string
 ): Promise<GeneratedItinerary> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -89,7 +94,7 @@ export async function generateItineraryWithGemini(
   // best free-tier model name if this default ever stops working — Google
   // renames/retires models fairly often. Override via GEMINI_MODEL without
   // touching code.
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
   const response = await fetch(`${GEMINI_API_BASE}/${model}:generateContent`, {
     method: "POST",
@@ -99,7 +104,7 @@ export async function generateItineraryWithGemini(
     },
     body: JSON.stringify({
       system_instruction: { parts: [{ text: buildSystemPrompt() }] },
-      contents: [{ role: "user", parts: [{ text: buildUserPrompt(destination, trip) }] }],
+      contents: [{ role: "user", parts: [{ text: buildUserPrompt(destination, trip, regenerationReason) }] }],
       generationConfig: {
         responseMimeType: "application/json",
       },

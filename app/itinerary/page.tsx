@@ -1,10 +1,28 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { ItineraryDisplay } from "@/components/ItineraryDisplay";
-import { Destination, GeneratedItinerary, PlanTier } from "@/lib/types";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Destination, GeneratedItinerary, PlanTier, REGENERATION_LIMITS } from "@/lib/types";
+
+interface OrderResponse {
+  id: string;
+  status: string;
+  plan: PlanTier;
+  customerName: string;
+  itinerary: GeneratedItinerary | null;
+  regenerationsUsed: number;
+  destination: Destination;
+  createdAt: string;
+}
+
+const STATUS_MESSAGES: Record<string, string> = {
+  payment_successful: "Your order is confirmed and about to start planning.",
+  ai_processing: "Our AI is putting your day-by-day plan together.",
+  pending_review: "Your itinerary is written and being checked by our team before it's sent to you.",
+};
 
 export default function ItineraryPage() {
   return (
@@ -26,98 +44,54 @@ export default function ItineraryPage() {
 function ItineraryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const orderIdFromUrl = searchParams.get("order");
+  const orderId = searchParams.get("order");
 
-  const [destination, setDestination] = useState<Destination | null>(null);
-  const [itinerary, setItinerary] = useState<GeneratedItinerary | null>(null);
-  const [plan, setPlan] = useState<PlanTier>("explorer");
-  const [travelerName, setTravelerName] = useState("");
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [order, setOrder] = useState<OrderResponse | null>(null);
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
+  const [checking, setChecking] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadExisting(orderId: string) {
+  const load = useCallback(
+    async (silent = false) => {
+      if (!orderId) return;
+      if (!silent) setStatus("loading");
       try {
         const res = await fetch(`/api/orders/${orderId}`);
-        if (!res.ok) throw new Error("Could not find that trip.");
-        const data = await res.json();
-        if (cancelled) return;
-        if (!data.itinerary) {
-          // Order exists but hasn't finished generating yet (rare — e.g. the
-          // browser was closed mid-generation). Fall back to generating it.
-          await generateFor(orderId);
-          return;
-        }
-        setDestination(data.destination);
-        setItinerary(data.itinerary);
-        setPlan(data.plan);
-        setTravelerName(data.customerName);
-        setStatus("ready");
-      } catch (err) {
-        if (!cancelled) {
-          setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
-          setStatus("error");
-        }
-      }
-    }
-
-    async function generateFor(orderId: string) {
-      try {
-        const res = await fetch("/api/generate-itinerary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId }),
-        });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || "Could not generate your itinerary.");
+          throw new Error(body.error || "Could not load that trip.");
         }
         const data = await res.json();
-        if (cancelled) return;
-        setDestination(data.destination);
-        setItinerary(data.itinerary);
-
-        // Fresh-checkout flow doesn't have plan/name from this response —
-        // pull them from sessionStorage where checkout left them.
-        const rawOrder = sessionStorage.getItem("travelly_order_meta");
-        if (rawOrder) {
-          const meta = JSON.parse(rawOrder);
-          setPlan(meta.plan);
-          setTravelerName(meta.name);
-        }
-        setStatus("ready");
+        setOrder(data);
+        setStatus("loaded");
       } catch (err) {
-        if (!cancelled) {
-          setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
-          setStatus("error");
-        }
+        setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
+        setStatus("error");
       }
-    }
+    },
+    [orderId]
+  );
 
-    if (orderIdFromUrl) {
-      loadExisting(orderIdFromUrl);
-      return;
-    }
-
-    const storedOrderId = sessionStorage.getItem("travelly_order_id");
-    if (!storedOrderId) {
+  useEffect(() => {
+    if (!orderId) {
       router.replace("/plan");
       return;
     }
-    generateFor(storedOrderId);
+    load();
+  }, [orderId, load, router]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [orderIdFromUrl, router]);
+  async function handleCheckAgain() {
+    setChecking(true);
+    await load(true);
+    setChecking(false);
+  }
 
   function downloadAsText() {
-    if (!itinerary || !destination) return;
+    if (!order?.itinerary || !order.destination) return;
+    const { itinerary, destination } = order;
     const lines: string[] = [];
     lines.push(`TRAVELLY — ${destination.name}, ${destination.state}`);
-    lines.push(`Plan: ${plan === "plus" ? "Travelly Plus" : "Explorer"}`);
+    lines.push(`Plan: ${order.plan === "plus" ? "Travelly Plus" : "Explorer"}`);
     lines.push("");
     lines.push(itinerary.tripOverview);
     lines.push("");
@@ -150,39 +124,217 @@ function ItineraryContent() {
         {status === "loading" && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-            <p className="mt-4 font-display text-lg font-semibold text-ink">
-              Planning your trip…
-            </p>
-            <p className="mt-1 text-sm text-muted">This usually takes under a minute.</p>
+            <p className="mt-4 text-sm text-muted">Loading your trip…</p>
           </div>
         )}
 
         {status === "error" && (
           <div className="py-24 text-center">
             <p className="font-display text-lg font-semibold text-ink">
-              We couldn't load your itinerary
+              We couldn't load this trip
             </p>
             <p className="mt-2 text-sm text-muted">{errorMsg}</p>
           </div>
         )}
 
-        {status === "ready" && itinerary && destination && (
+        {status === "loaded" && order && (order.status === "ready" || order.status === "delivered") && order.itinerary && (
           <div className="py-8">
             <ItineraryDisplay
-              destination={destination}
-              itinerary={itinerary}
-              plan={plan}
-              travelerName={travelerName}
+              destination={order.destination}
+              itinerary={order.itinerary}
+              plan={order.plan}
+              travelerName={order.customerName}
             />
+            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+              <a
+                href={`/api/orders/${order.id}/pdf`}
+                className="flex-1 rounded-full bg-brand px-6 py-3 text-center text-sm font-medium text-white transition hover:bg-brand-dark"
+              >
+                Download as PDF
+              </a>
+              <button
+                onClick={downloadAsText}
+                className="flex-1 rounded-full border border-brand px-6 py-3 text-sm font-medium text-brand transition hover:bg-brand-light"
+              >
+                Download as text
+              </button>
+            </div>
+            <EmailItinerary orderId={order.id} />
+            <RegenerateSection
+              orderId={order.id}
+              plan={order.plan}
+              regenerationsUsed={order.regenerationsUsed}
+              onRegenerated={() => load(true)}
+            />
+          </div>
+        )}
+
+        {status === "loaded" && order && order.status !== "ready" && order.status !== "delivered" && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <StatusBadge status={order.status} />
+            <p className="mt-4 font-display text-xl font-semibold text-ink">
+              {order.destination.name}, {order.destination.state}
+            </p>
+            <p className="mt-2 max-w-sm text-sm text-muted">
+              {STATUS_MESSAGES[order.status] ||
+                "We're working on it — this page will show your full itinerary once it's ready."}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              {order.plan === "plus" ? "Travelly Plus" : "Explorer"} orders are typically ready
+              within {order.plan === "plus" ? "1 hour" : "30 minutes"}.
+            </p>
             <button
-              onClick={downloadAsText}
-              className="mt-10 w-full rounded-full border border-brand px-6 py-3 text-sm font-medium text-brand transition hover:bg-brand-light"
+              onClick={handleCheckAgain}
+              disabled={checking}
+              className="mt-6 rounded-full border border-brand px-6 py-2.5 text-sm font-medium text-brand transition hover:bg-brand-light disabled:opacity-60"
             >
-              Download as text file
+              {checking ? "Checking…" : "Check again"}
             </button>
+            <p className="mt-4 text-xs text-muted">
+              You can also find this trip anytime from{" "}
+              <a href="/trips" className="font-medium text-brand hover:underline">
+                My Trips
+              </a>
+              .
+            </p>
           </div>
         )}
       </main>
     </>
+  );
+}
+
+function EmailItinerary({ orderId }: { orderId: string }) {
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  async function handleSend() {
+    setSending(true);
+    setEmailError("");
+    try {
+      const res = await fetch(`/api/orders/${orderId}/email`, { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Could not send the email.");
+      }
+      setSent(true);
+    } catch (err) {
+      setEmailError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 text-center">
+      {!sent ? (
+        <button
+          onClick={handleSend}
+          disabled={sending}
+          className="text-sm font-medium text-brand hover:underline disabled:opacity-60"
+        >
+          {sending ? "Sending…" : "Email me this itinerary"}
+        </button>
+      ) : (
+        <p className="text-sm text-verified">Sent! Check your inbox.</p>
+      )}
+      {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
+    </div>
+  );
+}
+
+function RegenerateSection({
+  orderId,
+  plan,
+  regenerationsUsed,
+  onRegenerated,
+}: {
+  orderId: string;
+  plan: PlanTier;
+  regenerationsUsed: number;
+  onRegenerated: () => void;
+}) {
+  const limit = REGENERATION_LIMITS[plan];
+  const remaining = limit - regenerationsUsed;
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  if (remaining <= 0) {
+    return (
+      <p className="mt-6 text-center text-xs text-muted">
+        You've used all {limit} regeneration{limit > 1 ? "s" : ""} for this trip.
+      </p>
+    );
+  }
+
+  async function handleRegenerate() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/orders/${orderId}/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reason.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Could not regenerate.");
+      }
+      setOpen(false);
+      setReason("");
+      onRegenerated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mt-6 text-center">
+      {!open ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="text-sm font-medium text-brand hover:underline"
+        >
+          Not quite right? Regenerate ({remaining} of {limit} left)
+        </button>
+      ) : (
+        <div className="mx-auto max-w-sm rounded-xl2 border border-line bg-surface p-4 text-left shadow-soft">
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-ink">
+              What would you like different? (optional)
+            </span>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={2}
+              placeholder="e.g. Less walking, more food spots"
+              className="w-full rounded-xl border border-line px-3 py-2 text-sm"
+            />
+          </label>
+          {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={handleRegenerate}
+              disabled={loading}
+              className="flex-1 rounded-full bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+            >
+              {loading ? "Regenerating…" : "Regenerate"}
+            </button>
+            <button
+              onClick={() => setOpen(false)}
+              disabled={loading}
+              className="rounded-full border border-line px-4 py-2 text-sm font-medium text-ink/70"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -11,6 +11,7 @@ export interface StoredOrder {
   status: OrderRecord["status"];
   paymentId: string | null;
   itinerary: GeneratedItinerary | null;
+  regenerationsUsed: number;
   createdAt: string;
 }
 
@@ -25,6 +26,7 @@ interface OrderRow {
   status: OrderRecord["status"];
   payment_id: string | null;
   itinerary: GeneratedItinerary | null;
+  regenerations_used: number;
   created_at: string;
 }
 
@@ -39,6 +41,7 @@ function rowToOrder(row: OrderRow): StoredOrder {
     status: row.status,
     paymentId: row.payment_id,
     itinerary: row.itinerary,
+    regenerationsUsed: row.regenerations_used ?? 0,
     createdAt: row.created_at,
   };
 }
@@ -94,6 +97,26 @@ export async function updateOrderStatus(
 
   const { error } = await supabase.from("orders").update(patch).eq("id", id);
   if (error) throw new Error(`Could not update order: ${error.message}`);
+}
+
+/** Regeneration: bumps the counter and replaces the itinerary in one go. */
+export async function applyRegeneration(
+  id: string,
+  itinerary: GeneratedItinerary,
+  newRegenerationsUsed: number
+): Promise<void> {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ itinerary, regenerations_used: newRegenerationsUsed, status: "ready" })
+    .eq("id", id);
+  if (error) throw new Error(`Could not regenerate itinerary: ${error.message}`);
+}
+
+export async function deleteOrder(id: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.from("orders").delete().eq("id", id);
+  if (error) throw new Error(`Could not delete order: ${error.message}`);
 }
 
 export async function getOrdersByUserId(userId: string): Promise<StoredOrder[]> {

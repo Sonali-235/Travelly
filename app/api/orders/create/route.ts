@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createOrder } from "@/lib/orders-db";
+import { getDestinationById } from "@/lib/destinations-db";
+import { generateItineraryWithGemini } from "@/lib/gemini";
+import { createOrder, updateOrderStatus } from "@/lib/orders-db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getCurrentUser } from "@/lib/supabase-server";
 import { CustomerInfo, PlanTier, TripRequest } from "@/lib/types";
+
+// Give this route extra time — it waits for the AI generation to finish
+// before responding, so the order lands in "pending_review" immediately
+// rather than needing a second request. 60s is the max on Vercel's free tier.
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -30,6 +37,25 @@ export async function POST(req: NextRequest) {
     }
 
     const order = await createOrder({ userId: user.id, trip, customer, plan, paymentId });
+
+    // Kick off AI generation right away so it's ready by the time admin
+    // reviews it — but never let a generation failure block the order
+    // itself from having been placed successfully.
+    try {
+      const destination = await getDestinationById(trip.destinationId);
+      if (destination) {
+        await updateOrderStatus(order.id, "ai_processing");
+        const itinerary = await generateItineraryWithGemini(destination, trip);
+        // pending_review, NOT ready — an admin has to approve before the
+        // customer can see it. That review step is deliberate.
+        await updateOrderStatus(order.id, "pending_review", itinerary);
+      }
+    } catch (genError) {
+      // Leave the order at payment_successful — admin can trigger
+      // generation manually from the admin orders page as a fallback.
+      console.error("Itinerary generation failed for order", order.id, genError);
+    }
+
     return NextResponse.json({ orderId: order.id });
   } catch (err) {
     console.error(err);

@@ -10,6 +10,15 @@ import { Destination, PLAN_PRICES, PlanTier, TripRequest } from "@/lib/types";
 
 const SKIP_PAYMENT = process.env.NEXT_PUBLIC_SKIP_PAYMENT === "true";
 
+// At least two words (a first and last name) — catches "asdf" or a single name typo.
+const FULL_NAME_PATTERN = /^\S+(\s+\S+)+$/;
+// Indian mobile numbers: 10 digits, starting 6-9. Strips spaces/dashes/+91 first.
+const PHONE_PATTERN = /^[6-9]\d{9}$/;
+
+function normalizePhone(raw: string): string {
+  return raw.replace(/[\s-]/g, "").replace(/^(\+?91)/, "");
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const [trip, setTrip] = useState<TripRequest | null>(null);
@@ -17,6 +26,8 @@ export default function CheckoutPage() {
   const [plan, setPlan] = useState<PlanTier>("plus");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [error, setError] = useState("");
@@ -55,17 +66,35 @@ export default function CheckoutPage() {
 
   if (!trip || checkingAuth) return null;
 
+  function validateFields(): boolean {
+    let ok = true;
+    if (!FULL_NAME_PATTERN.test(name.trim())) {
+      setNameError("Please enter your full name (first and last name).");
+      ok = false;
+    } else {
+      setNameError("");
+    }
+
+    const cleanPhone = normalizePhone(phone);
+    if (!PHONE_PATTERN.test(cleanPhone)) {
+      setPhoneError("Enter a valid 10-digit Indian mobile number.");
+      ok = false;
+    } else {
+      setPhoneError("");
+    }
+    return ok;
+  }
+
   async function handlePay() {
     setError("");
-    if (!name.trim() || phone.trim().length < 10) {
-      setError("Please enter your name and a valid phone number.");
-      return;
-    }
+    if (!validateFields()) return;
     setLoading(true);
 
     try {
       if (SKIP_PAYMENT) {
-        // Phase 1/2 test bypass — no real payment, no real OTP.
+        // Test bypass — no real payment moves, but everything downstream
+        // (order creation, AI generation, admin review) behaves exactly
+        // like a real purchase.
         await createOrderAndFinish("test_payment_" + Date.now());
         return;
       }
@@ -82,7 +111,7 @@ export default function CheckoutPage() {
         orderId: razorpayOrder.id,
         amountPaise: razorpayOrder.amount,
         customerName: name,
-        customerPhone: phone,
+        customerPhone: normalizePhone(phone),
         description: `Travelly ${plan === "plus" ? "Plus" : "Explorer"} — ${destination?.name ?? ""}`,
         onSuccess: (paymentId, razorpayOrderId, signature) => {
           verifyAndFinish(paymentId, razorpayOrderId, signature);
@@ -117,7 +146,7 @@ export default function CheckoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           trip,
-          customer: { name, phone },
+          customer: { name: name.trim(), phone: normalizePhone(phone) },
           plan,
           paymentId,
         }),
@@ -126,10 +155,10 @@ export default function CheckoutPage() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Could not save your order.");
       }
+      // Order creation itself kicks off AI generation server-side and sets
+      // the right status — this page's job is done, no waiting here.
       const { orderId } = await res.json();
-      sessionStorage.setItem("travelly_order_id", orderId);
-      sessionStorage.setItem("travelly_order_meta", JSON.stringify({ plan, name }));
-      router.push("/itinerary");
+      router.push(`/itinerary?order=${orderId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setLoading(false);
@@ -174,20 +203,32 @@ export default function CheckoutPage() {
             <span className="mb-1 block text-sm font-medium text-ink">Full name</span>
             <input
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-xl border border-line px-3 py-2 text-sm"
-              placeholder="Your name"
+              onChange={(e) => {
+                setName(e.target.value);
+                if (nameError) setNameError("");
+              }}
+              className={`w-full rounded-xl border px-3 py-2 text-sm ${
+                nameError ? "border-red-400" : "border-line"
+              }`}
+              placeholder="Your full name"
             />
+            {nameError && <p className="mt-1 text-xs text-red-600">{nameError}</p>}
           </label>
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-ink">Phone number</span>
             <input
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full rounded-xl border border-line px-3 py-2 text-sm"
+              onChange={(e) => {
+                setPhone(e.target.value);
+                if (phoneError) setPhoneError("");
+              }}
+              className={`w-full rounded-xl border px-3 py-2 text-sm ${
+                phoneError ? "border-red-400" : "border-line"
+              }`}
               placeholder="10-digit mobile number"
               inputMode="numeric"
             />
+            {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
           </label>
 
           {error && <p className="text-sm text-red-600">{error}</p>}

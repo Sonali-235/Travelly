@@ -31,6 +31,7 @@ export default function PlanPage() {
   const [destinationsList, setDestinationsList] = useState<Destination[]>([]);
   const [loadingDestinations, setLoadingDestinations] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [formError, setFormError] = useState("");
   const [form, setForm] = useState<TripRequest>({
     destinationId: "",
     departureCity: "",
@@ -74,7 +75,19 @@ export default function PlanPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError("");
     if (!form.destinationId) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (form.startDate < today) {
+      setFormError("Start date can't be in the past — please pick today or a future date.");
+      return;
+    }
+    if (!form.departureCity.trim()) {
+      setFormError("Please enter a departure city.");
+      return;
+    }
+
     sessionStorage.setItem("travelly_trip_request", JSON.stringify(form));
     router.push("/checkout");
   }
@@ -161,6 +174,7 @@ export default function PlanPage() {
             <input
               required
               type="date"
+              min={new Date().toISOString().slice(0, 10)}
               value={form.startDate}
               onChange={(e) => update("startDate", e.target.value)}
               className="input"
@@ -264,6 +278,8 @@ export default function PlanPage() {
               className="input resize-none"
             />
           </Field>
+
+          {formError && <p className="text-sm text-red-600">{formError}</p>}
 
           <button
             type="submit"

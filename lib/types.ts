@@ -11,6 +11,11 @@ export const PLAN_LABELS: Record<PlanTier, string> = {
   plus: "Travelly Plus",
 };
 
+export const REGENERATION_LIMITS: Record<PlanTier, number> = {
+  explorer: 1,
+  plus: 2,
+};
+
 // ---- Trip planner form ----
 export type BudgetStyle = "budget" | "mid-range" | "luxury";
 export type TravelPace = "relaxed" | "balanced" | "packed";
@@ -130,6 +135,7 @@ export interface OrderRecord {
     | "awaiting_payment"
     | "payment_successful"
     | "ai_processing"
+    | "pending_review"
     | "ready"
     | "delivered";
   paymentId?: string;

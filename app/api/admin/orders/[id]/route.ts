@@ -8,6 +8,7 @@ const VALID_STATUSES: OrderRecord["status"][] = [
   "awaiting_payment",
   "payment_successful",
   "ai_processing",
+  "pending_review",
   "ready",
   "delivered",
 ];
