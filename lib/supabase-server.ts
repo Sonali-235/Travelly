@@ -7,6 +7,10 @@ import { cookies } from "next/headers";
 // what that user is allowed to see (their own auth identity). This is
 // separate from lib/supabase.ts, which uses the secret service_role key for
 // admin/order data access and has nothing to do with customer login.
+//
+// Uses the batch getAll/setAll cookie API (the current @supabase/ssr
+// pattern) for consistency with middleware.ts, rather than the older
+// per-cookie get/set/remove style.
 export function createSupabaseServerClient() {
   const cookieStore = cookies();
 
@@ -15,22 +19,17 @@ export function createSupabaseServerClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
         },
-        set(name: string, value: string, options: Record<string, unknown>) {
+        setAll(cookiesToSet) {
           try {
-            cookieStore.set({ name, value, ...options });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
           } catch {
             // Called from a Server Component, which can't set cookies —
             // middleware refreshes the session instead. Safe to ignore.
-          }
-        },
-        remove(name: string, options: Record<string, unknown>) {
-          try {
-            cookieStore.set({ name, value: "", ...options });
-          } catch {
-            // Same as above — safe to ignore outside a Route Handler.
           }
         },
       },

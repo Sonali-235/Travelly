@@ -3,28 +3,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { ADMIN_COOKIE_NAME, verifySessionToken } from "@/lib/admin-auth";
 
 export async function middleware(request: NextRequest) {
+  // IMPORTANT: this response object must be the SAME one reused throughout —
+  // recreating it inside the cookie callbacks (an earlier bug here) silently
+  // drops any cookie set before the last one, corrupting the login session.
   let response = NextResponse.next({ request: { headers: request.headers } });
 
   // --- Part 1: keep the customer's Supabase auth session fresh. ---
   // This is a completely separate system from the admin password below —
-  // this is real per-user login (email/password + Google).
+  // this is real per-user login (email/password + Google). Uses the modern
+  // batch getAll/setAll cookie API, which is the pattern @supabase/ssr
+  // actually expects in middleware (the per-cookie get/set/remove style
+  // used elsewhere in this app is fine in Route Handlers, but not safe here).
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options: Record<string, unknown>) {
-          request.cookies.set({ name, value });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request: { headers: request.headers } });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: Record<string, unknown>) {
-          request.cookies.set({ name, value: "" });
-          response = NextResponse.next({ request: { headers: request.headers } });
-          response.cookies.set({ name, value: "", ...options });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
         },
       },
     }
@@ -61,7 +64,6 @@ export const config = {
     "/login",
     "/auth/callback",
     "/api/orders/:path*",
-    "/api/generate-itinerary",
     "/api/trips",
   ],
 };
