@@ -1,23 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AdminHeader } from "@/components/AdminHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { StoredOrder } from "@/lib/orders-db";
 
-const STATUS_OPTIONS = [
-  "awaiting_payment",
-  "payment_successful",
-  "ai_processing",
-  "pending_review",
-  "ready",
-  "delivered",
-];
-
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<StoredOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<Record<string, string>>({});
 
@@ -30,15 +21,6 @@ export default function AdminOrdersPage() {
   }
 
   useEffect(load, []);
-
-  async function updateStatus(id: string, status: string) {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: status as StoredOrder["status"] } : o)));
-    await fetch(`/api/admin/orders/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-  }
 
   async function handleGenerate(id: string) {
     setBusyId(id);
@@ -62,7 +44,12 @@ export default function AdminOrdersPage() {
 
   async function handleApprove(id: string) {
     setBusyId(id);
-    await updateStatus(id, "ready");
+    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: "ready" } : o)));
+    await fetch(`/api/admin/orders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "ready" }),
+    });
     setBusyId(null);
   }
 
@@ -90,10 +77,10 @@ export default function AdminOrdersPage() {
           const needsApproval = o.status === "pending_review";
 
           return (
-            <div key={o.id} className="rounded-xl2 border border-line bg-surface shadow-soft">
-              <button
-                onClick={() => setExpandedId(expandedId === o.id ? null : o.id)}
-                className="flex w-full items-center justify-between p-4 text-left"
+            <div key={o.id} className="rounded-xl2 border border-line bg-surface p-4 shadow-soft">
+              <Link
+                href={`/admin/orders/${o.id}`}
+                className="flex items-center justify-between hover:opacity-80"
               >
                 <div>
                   <p className="font-medium text-ink">
@@ -105,10 +92,15 @@ export default function AdminOrdersPage() {
                   </p>
                 </div>
                 <StatusBadge status={o.status} />
-              </button>
+              </Link>
 
-              {/* Quick actions visible without expanding — this is the main workflow */}
-              <div className="flex flex-wrap gap-2 px-4 pb-4">
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
+                <Link
+                  href={`/admin/orders/${o.id}`}
+                  className="text-xs font-medium text-brand hover:underline"
+                >
+                  Review & edit →
+                </Link>
                 {needsGeneration && (
                   <button
                     onClick={() => handleGenerate(o.id)}
@@ -124,51 +116,12 @@ export default function AdminOrdersPage() {
                     disabled={busyId === o.id}
                     className="rounded-full bg-verified px-4 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
                   >
-                    {busyId === o.id ? "Publishing…" : "Approve & publish to customer"}
+                    {busyId === o.id ? "Publishing…" : "Approve & publish (as-is)"}
                   </button>
                 )}
-                {actionError[o.id] && (
-                  <p className="w-full text-xs text-red-600">{actionError[o.id]}</p>
-                )}
               </div>
-
-              {expandedId === o.id && (
-                <div className="border-t border-line p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                    Trip request
-                  </p>
-                  <pre className="mt-1 overflow-x-auto rounded-lg bg-canvas p-3 text-xs text-ink/70">
-                    {JSON.stringify(o.tripRequest, null, 2)}
-                  </pre>
-
-                  {o.itinerary && (
-                    <>
-                      <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted">
-                        Generated itinerary (preview)
-                      </p>
-                      <pre className="mt-1 max-h-64 overflow-y-auto overflow-x-auto rounded-lg bg-canvas p-3 text-xs text-ink/70">
-                        {JSON.stringify(o.itinerary, null, 2)}
-                      </pre>
-                    </>
-                  )}
-
-                  <label className="mt-4 block max-w-xs">
-                    <span className="mb-1 block text-xs font-medium text-ink">
-                      Manually set status
-                    </span>
-                    <select
-                      value={o.status}
-                      onChange={(e) => updateStatus(o.id, e.target.value)}
-                      className="w-full rounded-xl border border-line px-3 py-2 text-sm"
-                    >
-                      {STATUS_OPTIONS.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+              {actionError[o.id] && (
+                <p className="mt-2 text-xs text-red-600">{actionError[o.id]}</p>
               )}
             </div>
           );
