@@ -89,6 +89,16 @@ export async function getOrderById(id: string): Promise<StoredOrder | null> {
   return rowToOrder(data as unknown as OrderRow);
 }
 
+/** Admin editing the AI draft before approving — itinerary content only, no status change. */
+export async function updateOrderItinerary(
+  id: string,
+  itinerary: GeneratedItinerary
+): Promise<void> {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.from("orders").update({ itinerary }).eq("id", id);
+  if (error) throw new Error(`Could not save itinerary edits: ${error.message}`);
+}
+
 export async function updateOrderStatus(
   id: string,
   status: OrderRecord["status"],
