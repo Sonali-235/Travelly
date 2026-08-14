@@ -12,6 +12,7 @@ export interface StoredOrder {
   paymentId: string | null;
   itinerary: GeneratedItinerary | null;
   regenerationsUsed: number;
+  hiddenFromCustomer: boolean;
   createdAt: string;
 }
 
@@ -27,6 +28,7 @@ interface OrderRow {
   payment_id: string | null;
   itinerary: GeneratedItinerary | null;
   regenerations_used: number;
+  hidden_from_customer: boolean;
   created_at: string;
 }
 
@@ -42,6 +44,7 @@ function rowToOrder(row: OrderRow): StoredOrder {
     paymentId: row.payment_id,
     itinerary: row.itinerary,
     regenerationsUsed: row.regenerations_used ?? 0,
+    hiddenFromCustomer: row.hidden_from_customer ?? false,
     createdAt: row.created_at,
   };
 }
@@ -113,10 +116,19 @@ export async function applyRegeneration(
   if (error) throw new Error(`Could not regenerate itinerary: ${error.message}`);
 }
 
-export async function deleteOrder(id: string): Promise<void> {
+/**
+ * Soft delete only — this is what "delete" in My Trips actually calls.
+ * The row stays in the database (admin's order history and revenue
+ * records must never disappear just because a customer tidied up their
+ * own view), it's just hidden from that customer's trip list.
+ */
+export async function hideOrderForCustomer(id: string): Promise<void> {
   const supabase = getSupabaseClient();
-  const { error } = await supabase.from("orders").delete().eq("id", id);
-  if (error) throw new Error(`Could not delete order: ${error.message}`);
+  const { error } = await supabase
+    .from("orders")
+    .update({ hidden_from_customer: true })
+    .eq("id", id);
+  if (error) throw new Error(`Could not remove trip: ${error.message}`);
 }
 
 export async function getOrdersByUserId(userId: string): Promise<StoredOrder[]> {
@@ -125,6 +137,7 @@ export async function getOrdersByUserId(userId: string): Promise<StoredOrder[]> 
     .from("orders")
     .select("*")
     .eq("user_id", userId)
+    .eq("hidden_from_customer", false)
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(`Could not load trips: ${error.message}`);

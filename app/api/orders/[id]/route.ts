@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDestinationById } from "@/lib/destinations-db";
-import { deleteOrder, getOrderById } from "@/lib/orders-db";
+import { getOrderById, hideOrderForCustomer } from "@/lib/orders-db";
 import { getCurrentUser } from "@/lib/supabase-server";
 
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, must-revalidate" };
@@ -57,7 +57,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: "Not authorized for this order." }, { status: 403 });
     }
 
-    await deleteOrder(params.id);
+    await hideOrderForCustomer(params.id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error(err);

@@ -68,8 +68,19 @@ export default function AdminOrdersPage() {
 
   return (
     <AdminHeader>
-      <h1 className="font-display text-2xl font-semibold text-ink">Orders</h1>
-      <p className="mt-1 text-sm text-muted">{orders.length} total, most recent first.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-ink">Orders</h1>
+          <p className="mt-1 text-sm text-muted">{orders.length} total, most recent first.</p>
+        </div>
+        <button
+          onClick={load}
+          disabled={loading}
+          className="rounded-full border border-line px-4 py-2 text-xs font-medium text-ink hover:border-brand/40 disabled:opacity-60"
+        >
+          {loading ? "Refreshing…" : "↻ Refresh"}
+        </button>
+      </div>
 
       {loading && <p className="mt-6 text-sm text-muted">Loading…</p>}
 
