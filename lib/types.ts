@@ -16,6 +16,11 @@ export const REGENERATION_LIMITS: Record<PlanTier, number> = {
   plus: 2,
 };
 
+// Customer can only request a regeneration within this many days of the
+// itinerary becoming "ready" — after that, the option disappears (they can
+// still mark themselves satisfied any time, just not request changes).
+export const REGENERATION_WINDOW_DAYS = 2;
+
 // ---- Trip planner form ----
 export type BudgetStyle = "budget" | "mid-range" | "luxury";
 export type TravelPace = "relaxed" | "balanced" | "packed";
@@ -127,16 +132,21 @@ export interface GeneratedItinerary {
   photographySuggestions: string[];
 }
 
+// Four statuses, matching exactly what both admin and the customer actually
+// need to see and act on:
+//   under_review — payment done, AI has drafted (or is drafting) the plan,
+//                   admin needs to check/edit it before it's visible
+//   ready         — admin approved it, customer can see the full itinerary
+//   regenerating  — customer asked for changes; admin needs to reprocess it
+//                   (does NOT call the AI automatically — an admin action does)
+//   delivered     — customer confirmed they're happy with it (rating + comment).
+//                   Final state — no more edits or regenerations after this.
+export type OrderStatus = "under_review" | "ready" | "regenerating" | "delivered";
+
 export interface OrderRecord {
   tripRequest: TripRequest;
   customer: CustomerInfo;
   plan: PlanTier;
-  status:
-    | "awaiting_payment"
-    | "payment_successful"
-    | "ai_processing"
-    | "pending_review"
-    | "ready"
-    | "delivered";
+  status: OrderStatus;
   paymentId?: string;
 }

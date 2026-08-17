@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 interface FieldDef {
   key: string;
   label: string;
@@ -110,7 +112,7 @@ export function RepeatableRows({
   );
 }
 
-/** Simple one-item-per-line text list editor (used for "local food"). */
+/** Simple one-item-per-line text list editor (used for packing lists, tips, etc). */
 export function ListTextArea({
   label,
   helpText,
@@ -122,16 +124,37 @@ export function ListTextArea({
   items: string[];
   onChange: (items: string[]) => void;
 }) {
+  // Local text state is essential here: if the textarea's value were derived
+  // directly from `items` (rebuilt on every keystroke via split/trim/filter),
+  // pressing Enter or Space gets silently stripped before it can even
+  // render — filter(Boolean) removes the blank line an Enter just created,
+  // and trim() removes a trailing space, both on the very next render. Local
+  // state lets the user type freely; the array only gets rebuilt on blur.
+  const [text, setText] = useState(items.join("\n"));
+
+  useEffect(() => {
+    setText(items.join("\n"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.join("\n")]);
+
+  function commit() {
+    onChange(
+      text
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    );
+  }
+
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-medium text-ink">{label}</span>
       {helpText && <p className="mb-1 text-xs text-muted">{helpText}</p>}
       <textarea
         rows={4}
-        value={items.join("\n")}
-        onChange={(e) =>
-          onChange(e.target.value.split("\n").map((s) => s.trim()).filter(Boolean))
-        }
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
         placeholder={"One per line, e.g.\nDal Baati Churma\nGhewar"}
         className="w-full rounded-xl border border-line px-3 py-2 text-sm"
       />

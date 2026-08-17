@@ -102,6 +102,33 @@ export function ItineraryDisplay({
         </section>
       )}
 
+      {showVerifiedExtras && destination.verified.restaurants.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="font-display text-lg font-semibold text-ink">Verified restaurants</h2>
+            <VerifiedBadge />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {destination.verified.restaurants.map((r) => (
+              <div key={r.name} className="rounded-xl2 border border-line bg-surface p-4 shadow-soft">
+                <p className="font-medium text-ink">{r.name}</p>
+                <p className="mt-1 text-sm text-ink/70">
+                  {r.cuisine} · {r.priceRange}
+                </p>
+                <a
+                  href={mapsUrl(r.mapsQuery)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-block text-xs font-medium text-brand hover:underline"
+                >
+                  View on Google Maps →
+                </a>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {showVerifiedExtras && (
         <section>
           <div className="mb-3 flex items-center gap-2">
@@ -167,6 +194,23 @@ export function ItineraryDisplay({
         </section>
       )}
 
+      {showVerifiedExtras && destination.verified.shopping.length > 0 && (
+        <section>
+          <div className="mb-2 flex items-center gap-2">
+            <h2 className="font-display text-base font-semibold text-ink">Shopping</h2>
+            <VerifiedBadge />
+          </div>
+          <ul className="space-y-1 text-sm text-ink/80">
+            {destination.verified.shopping.map((s) => (
+              <li key={s.name} className="flex justify-between">
+                <span>{s.name}</span>
+                <span className="text-muted">{s.specialty}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Budget, packing, tips - AI suggested, available on both plans */}
       <section className="grid gap-8 sm:grid-cols-2">
         <div>
@@ -207,6 +251,20 @@ export function ItineraryDisplay({
           ))}
         </ul>
       </section>
+
+      {itinerary.photographySuggestions.length > 0 && (
+        <section>
+          <div className="mb-2 flex items-center gap-2">
+            <h2 className="font-display text-base font-semibold text-ink">Photography spots</h2>
+            <AiSuggestedBadge />
+          </div>
+          <ul className="space-y-1 text-sm text-ink/80">
+            {itinerary.photographySuggestions.map((p) => (
+              <li key={p}>· {p}</li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

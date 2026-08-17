@@ -7,8 +7,9 @@ import { getCurrentUser } from "@/lib/supabase-server";
 import { CustomerInfo, PlanTier, TripRequest } from "@/lib/types";
 
 // Give this route extra time — it waits for the AI generation to finish
-// before responding, so the order lands in "pending_review" immediately
-// rather than needing a second request. 60s is the max on Vercel's free tier.
+// before responding, so the order lands in "under_review" (with a draft
+// ready for admin) immediately rather than needing a second request.
+// 60s is the max on Vercel's free tier.
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
@@ -38,21 +39,18 @@ export async function POST(req: NextRequest) {
 
     const order = await createOrder({ userId: user.id, trip, customer, plan, paymentId });
 
-    // Kick off AI generation right away so it's ready by the time admin
-    // reviews it — but never let a generation failure block the order
-    // itself from having been placed successfully.
+    // Kick off AI generation right away so a draft is ready by the time
+    // admin reviews it — but never let a generation failure block the
+    // order itself from having been placed successfully. The order stays
+    // "under_review" the whole time (with or without a draft yet) — admin
+    // can trigger generation manually from the review page as a fallback.
     try {
       const destination = await getDestinationById(trip.destinationId);
       if (destination) {
-        await updateOrderStatus(order.id, "ai_processing");
         const itinerary = await generateItineraryWithGemini(destination, trip);
-        // pending_review, NOT ready — an admin has to approve before the
-        // customer can see it. That review step is deliberate.
-        await updateOrderStatus(order.id, "pending_review", itinerary);
+        await updateOrderStatus(order.id, "under_review", itinerary);
       }
     } catch (genError) {
-      // Leave the order at payment_successful — admin can trigger
-      // generation manually from the admin orders page as a fallback.
       console.error("Itinerary generation failed for order", order.id, genError);
     }
 

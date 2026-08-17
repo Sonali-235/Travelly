@@ -10,9 +10,9 @@ export default async function AdminDashboard() {
 
   const sampleDataCount = destinations.filter((d) => d.verified.isSampleData).length;
   const readyOrders = orders.filter((o) => o.status === "ready" || o.status === "delivered").length;
-  const totalRevenue = orders
-    .filter((o) => o.status !== "awaiting_payment")
-    .reduce((sum, o) => sum + (o.plan === "plus" ? 99 : 49), 0);
+  // Every order in this table exists only because payment succeeded — there's
+  // no "awaiting payment" state anymore, so no filtering needed here.
+  const totalRevenue = orders.reduce((sum, o) => sum + (o.plan === "plus" ? 99 : 49), 0);
 
   return (
     <AdminHeader>

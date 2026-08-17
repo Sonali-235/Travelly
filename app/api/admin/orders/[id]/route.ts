@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDestinationById } from "@/lib/destinations-db";
-import { getOrderById, updateOrderStatus } from "@/lib/orders-db";
-import { OrderRecord } from "@/lib/types";
+import { approveOrder, getOrderById, updateOrderStatus } from "@/lib/orders-db";
+import { OrderStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, must-revalidate" };
 
-const VALID_STATUSES: OrderRecord["status"][] = [
-  "awaiting_payment",
-  "payment_successful",
-  "ai_processing",
-  "pending_review",
-  "ready",
-  "delivered",
-];
+const VALID_STATUSES: OrderStatus[] = ["under_review", "ready", "regenerating", "delivered"];
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -39,7 +32,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: "Invalid status." }, { status: 400 });
     }
 
-    await updateOrderStatus(params.id, status);
+    // Moving to "ready" always goes through approveOrder so ready_at gets
+    // stamped — that timestamp is what the customer's 2-day regeneration
+    // window is measured from.
+    if (status === "ready") {
+      await approveOrder(params.id);
+    } else {
+      await updateOrderStatus(params.id, status);
+    }
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error(err);

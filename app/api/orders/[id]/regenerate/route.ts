@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDestinationById } from "@/lib/destinations-db";
-import { generateItineraryWithGemini } from "@/lib/gemini";
-import { applyRegeneration, getOrderById } from "@/lib/orders-db";
+import { getOrderById, requestRegeneration } from "@/lib/orders-db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getCurrentUser } from "@/lib/supabase-server";
-import { REGENERATION_LIMITS } from "@/lib/types";
+import { REGENERATION_LIMITS, REGENERATION_WINDOW_DAYS } from "@/lib/types";
 
-export const maxDuration = 60;
-
+// This does NOT call the AI. It only flags the order for admin to process —
+// per the intended workflow, every draft (including regenerated ones) goes
+// through admin review before a customer ever sees it. See
+// /api/admin/orders/[id]/generate for where the actual regeneration happens.
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const ip = getClientIp(req);
   const { allowed } = checkRateLimit(`regenerate:${ip}`, 10, 60_000);
@@ -28,8 +28,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (order.userId !== user.id) {
       return NextResponse.json({ error: "Not authorized for this order." }, { status: 403 });
     }
-    if (order.status !== "ready" && order.status !== "delivered") {
-      return NextResponse.json({ error: "This itinerary isn't ready yet." }, { status: 400 });
+    if (order.status !== "ready") {
+      return NextResponse.json(
+        { error: "This itinerary isn't in a state that can be regenerated right now." },
+        { status: 400 }
+      );
     }
 
     const limit = REGENERATION_LIMITS[order.plan];
@@ -45,21 +48,26 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       );
     }
 
-    const { reason } = await req.json().catch(() => ({ reason: undefined }));
-
-    const destination = await getDestinationById(order.destinationId);
-    if (!destination) {
-      return NextResponse.json({ error: "Destination not found." }, { status: 404 });
+    if (order.readyAt) {
+      const daysSinceReady = (Date.now() - new Date(order.readyAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceReady > REGENERATION_WINDOW_DAYS) {
+        return NextResponse.json(
+          {
+            error: `Regeneration is only available within ${REGENERATION_WINDOW_DAYS} days of your itinerary being ready.`,
+          },
+          { status: 403 }
+        );
+      }
     }
 
-    const itinerary = await generateItineraryWithGemini(destination, order.tripRequest, reason);
-    await applyRegeneration(order.id, itinerary, order.regenerationsUsed + 1);
+    const { reason } = await req.json().catch(() => ({ reason: undefined }));
+    await requestRegeneration(order.id, reason, order.regenerationsUsed + 1);
 
-    return NextResponse.json({ ok: true, regenerationsUsed: order.regenerationsUsed + 1 });
+    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error(err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Could not regenerate itinerary." },
+      { error: err instanceof Error ? err.message : "Could not request regeneration." },
       { status: 500 }
     );
   }

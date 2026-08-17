@@ -9,8 +9,6 @@ import type { StoredOrder } from "@/lib/orders-db";
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<StoredOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<Record<string, string>>({});
 
   function load() {
     setLoading(true);
@@ -21,37 +19,6 @@ export default function AdminOrdersPage() {
   }
 
   useEffect(load, []);
-
-  async function handleGenerate(id: string) {
-    setBusyId(id);
-    setActionError((e) => ({ ...e, [id]: "" }));
-    try {
-      const res = await fetch(`/api/admin/orders/${id}/generate`, { method: "POST" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || "Could not generate itinerary.");
-      }
-      load();
-    } catch (err) {
-      setActionError((e) => ({
-        ...e,
-        [id]: err instanceof Error ? err.message : "Something went wrong.",
-      }));
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleApprove(id: string) {
-    setBusyId(id);
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: "ready" } : o)));
-    await fetch(`/api/admin/orders/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "ready" }),
-    });
-    setBusyId(null);
-  }
 
   return (
     <AdminHeader>
@@ -72,60 +39,29 @@ export default function AdminOrdersPage() {
       {loading && <p className="mt-6 text-sm text-muted">Loading…</p>}
 
       <div className="mt-6 space-y-3">
-        {orders.map((o) => {
-          const needsGeneration = !o.itinerary && o.status !== "pending_review";
-          const needsApproval = o.status === "pending_review";
-
-          return (
-            <div key={o.id} className="rounded-xl2 border border-line bg-surface p-4 shadow-soft">
-              <Link
-                href={`/admin/orders/${o.id}`}
-                className="flex items-center justify-between hover:opacity-80"
-              >
-                <div>
-                  <p className="font-medium text-ink">
-                    {o.customer.name} · {o.customer.phone}
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted">
-                    {o.destinationId} · {o.plan === "plus" ? "Travelly Plus" : "Explorer"} ·{" "}
-                    {new Date(o.createdAt).toLocaleString("en-IN")}
-                  </p>
-                </div>
-                <StatusBadge status={o.status} />
-              </Link>
-
-              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
-                <Link
-                  href={`/admin/orders/${o.id}`}
-                  className="text-xs font-medium text-brand hover:underline"
-                >
-                  Review & edit →
-                </Link>
-                {needsGeneration && (
-                  <button
-                    onClick={() => handleGenerate(o.id)}
-                    disabled={busyId === o.id}
-                    className="rounded-full bg-brand px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-dark disabled:opacity-60"
-                  >
-                    {busyId === o.id ? "Generating…" : "Generate itinerary"}
-                  </button>
-                )}
-                {needsApproval && (
-                  <button
-                    onClick={() => handleApprove(o.id)}
-                    disabled={busyId === o.id}
-                    className="rounded-full bg-verified px-4 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
-                  >
-                    {busyId === o.id ? "Publishing…" : "Approve & publish (as-is)"}
-                  </button>
-                )}
+        {orders.map((o) => (
+          <Link
+            key={o.id}
+            href={`/admin/orders/${o.id}`}
+            className="block rounded-xl2 border border-line bg-surface p-4 shadow-soft transition hover:border-brand/40"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-ink">
+                  {o.customer.name} · {o.customer.phone}
+                </p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {o.destinationId} · {o.plan === "plus" ? "Travelly Plus" : "Explorer"} ·{" "}
+                  {new Date(o.createdAt).toLocaleString("en-IN")}
+                </p>
               </div>
-              {actionError[o.id] && (
-                <p className="mt-2 text-xs text-red-600">{actionError[o.id]}</p>
-              )}
+              <div className="flex items-center gap-3">
+                <StatusBadge status={o.status} />
+                <span className="text-xs font-medium text-brand">Review & edit →</span>
+              </div>
             </div>
-          );
-        })}
+          </Link>
+        ))}
         {!loading && orders.length === 0 && (
           <p className="text-sm text-muted">No orders yet.</p>
         )}

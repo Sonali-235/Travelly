@@ -5,9 +5,14 @@ import { getOrderById, updateOrderStatus } from "@/lib/orders-db";
 
 export const maxDuration = 60;
 
-// Admin-only fallback trigger — used when automatic generation failed at
-// checkout (e.g. a Gemini hiccup) or when admin wants to regenerate before
-// approving. Protected by middleware (matches /api/admin/:path*).
+// Admin-only trigger — covers two cases with the same action:
+//   1. Fresh generation (order has no draft yet, e.g. checkout's automatic
+//      attempt failed).
+//   2. Processing a customer's regeneration request (order.status is
+//      "regenerating") — reuses their stored reason as extra context.
+// Either way, the result always lands back at "under_review" so admin
+// reviews the draft before it's ever visible to the customer.
+// Protected by middleware (matches /api/admin/:path*).
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const order = await getOrderById(params.id);
@@ -20,9 +25,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: "Destination not found." }, { status: 404 });
     }
 
-    await updateOrderStatus(order.id, "ai_processing");
-    const itinerary = await generateItineraryWithGemini(destination, order.tripRequest);
-    await updateOrderStatus(order.id, "pending_review", itinerary);
+    const itinerary = await generateItineraryWithGemini(
+      destination,
+      order.tripRequest,
+      order.regenerationReason || undefined
+    );
+    await updateOrderStatus(order.id, "under_review", itinerary);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

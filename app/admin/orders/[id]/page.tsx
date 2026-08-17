@@ -81,13 +81,14 @@ export default function AdminOrderDetailPage() {
     setBusy("approve");
     setError("");
     try {
-      // Save any unsaved edits first, then publish.
+      // Save any unsaved edits first, then publish — one click does both.
       if (itinerary) {
-        await fetch(`/api/admin/orders/${orderId}/itinerary`, {
+        const saveRes = await fetch(`/api/admin/orders/${orderId}/itinerary`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(itinerary),
         });
+        if (!saveRes.ok) throw new Error("Could not save your edits.");
       }
       const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: "PATCH",
@@ -120,6 +121,9 @@ export default function AdminOrderDetailPage() {
 
   const trip = order.tripRequest;
   const showVerifiedPreview = order.plan === "plus";
+  const isDelivered = order.status === "delivered";
+  const isRegenerating = order.status === "regenerating";
+  const needsGeneration = !itinerary || isRegenerating;
 
   return (
     <AdminHeader>
@@ -139,6 +143,34 @@ export default function AdminOrderDetailPage() {
         </div>
         <StatusBadge status={order.status} />
       </div>
+
+      {/* Regeneration request banner — the whole reason this order needs attention */}
+      {isRegenerating && (
+        <div className="mt-4 rounded-xl2 border border-warn-border bg-warn-bg p-4">
+          <p className="text-sm font-medium text-warn">Customer requested a regeneration</p>
+          {order.regenerationReason ? (
+            <p className="mt-1 text-sm text-ink/80">"{order.regenerationReason}"</p>
+          ) : (
+            <p className="mt-1 text-sm text-ink/60">No specific reason given.</p>
+          )}
+        </div>
+      )}
+
+      {/* Delivered summary — final state, shown instead of the editor */}
+      {isDelivered && (
+        <div className="mt-4 rounded-xl2 border border-brand/30 bg-brand-light p-4">
+          <p className="text-sm font-medium text-brand">
+            Delivered — customer confirmed satisfaction
+          </p>
+          <p className="mt-1 text-sm text-ink/80">
+            Rating: {"★".repeat(order.satisfactionRating || 0)}
+            {"☆".repeat(5 - (order.satisfactionRating || 0))} ({order.satisfactionRating}/5)
+          </p>
+          {order.satisfactionComment && (
+            <p className="mt-1 text-sm text-ink/70">"{order.satisfactionComment}"</p>
+          )}
+        </div>
+      )}
 
       {/* Trip request — read-only, formatted, no JSON */}
       <section className="mt-6 rounded-xl2 border border-line bg-surface p-4 shadow-soft">
@@ -185,51 +217,85 @@ export default function AdminOrderDetailPage() {
         </section>
       )}
 
-      {/* Itinerary review/edit */}
-      <section className="mt-6 rounded-xl2 border border-line bg-surface p-4 shadow-soft">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-ink">AI-generated itinerary</h2>
-          <button
-            onClick={handleGenerate}
-            disabled={busy !== null}
-            className="text-xs font-medium text-brand hover:underline disabled:opacity-60"
-          >
-            {busy === "generate" ? "Generating…" : itinerary ? "Regenerate from scratch" : "Generate now"}
-          </button>
-        </div>
-
-        {!itinerary && (
-          <p className="mt-3 text-sm text-muted">
-            No itinerary yet — click "Generate now" above.
-          </p>
-        )}
-
-        {itinerary && (
-          <div className="mt-4">
-            <ItineraryEditor itinerary={itinerary} onChange={setItinerary} />
+      {/* Itinerary review/edit — locked once delivered */}
+      {!isDelivered && (
+        <section className="mt-6 rounded-xl2 border border-line bg-surface p-4 shadow-soft">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-ink">AI-generated itinerary</h2>
+            {needsGeneration && (
+              <button
+                onClick={handleGenerate}
+                disabled={busy !== null}
+                className="rounded-full bg-brand px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-dark disabled:opacity-60"
+              >
+                {busy === "generate"
+                  ? "Generating…"
+                  : isRegenerating
+                  ? "Process regeneration request"
+                  : "Generate itinerary"}
+              </button>
+            )}
           </div>
-        )}
-      </section>
+
+          {!itinerary && (
+            <p className="mt-3 text-sm text-muted">No draft yet — click "Generate itinerary" above.</p>
+          )}
+
+          {itinerary && !isRegenerating && (
+            <div className="mt-4">
+              <ItineraryEditor itinerary={itinerary} onChange={setItinerary} />
+            </div>
+          )}
+
+          {itinerary && isRegenerating && (
+            <p className="mt-3 text-sm text-muted">
+              Showing the previous draft below — click "Process regeneration request" above to
+              generate a new one addressing the customer's feedback.
+            </p>
+          )}
+          {itinerary && isRegenerating && (
+            <div className="mt-4 opacity-50">
+              <ItineraryEditor itinerary={itinerary} onChange={() => {}} />
+            </div>
+          )}
+        </section>
+      )}
+
+      {isDelivered && (
+        <section className="mt-6 rounded-xl2 border border-line bg-surface p-4 shadow-soft opacity-75">
+          <h2 className="text-sm font-semibold text-ink">Final itinerary (read-only)</h2>
+          <p className="mt-1 text-xs text-muted">
+            This order is delivered — no further edits are possible.
+          </p>
+          {itinerary && (
+            <div className="pointer-events-none mt-4">
+              <ItineraryEditor itinerary={itinerary} onChange={() => {}} />
+            </div>
+          )}
+        </section>
+      )}
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       {savedMsg && <p className="mt-4 text-sm text-verified">{savedMsg}</p>}
 
-      <div className="mt-6 flex flex-wrap gap-3 pb-16">
-        <button
-          onClick={handleSaveEdits}
-          disabled={busy !== null || !itinerary}
-          className="rounded-full border border-brand px-5 py-2.5 text-sm font-medium text-brand hover:bg-brand-light disabled:opacity-60"
-        >
-          {busy === "save" ? "Saving…" : "Save changes"}
-        </button>
-        <button
-          onClick={handleApprove}
-          disabled={busy !== null || !itinerary}
-          className="rounded-full bg-verified px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
-        >
-          {busy === "approve" ? "Publishing…" : "Save & approve for customer"}
-        </button>
-      </div>
+      {!isDelivered && !isRegenerating && itinerary && (
+        <div className="mt-6 flex flex-wrap gap-3 pb-16">
+          <button
+            onClick={handleSaveEdits}
+            disabled={busy !== null}
+            className="rounded-full border border-brand px-5 py-2.5 text-sm font-medium text-brand hover:bg-brand-light disabled:opacity-60"
+          >
+            {busy === "save" ? "Saving…" : "Save"}
+          </button>
+          <button
+            onClick={handleApprove}
+            disabled={busy !== null}
+            className="rounded-full bg-verified px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+          >
+            {busy === "approve" ? "Publishing…" : "Publish and approve"}
+          </button>
+        </div>
+      )}
     </AdminHeader>
   );
 }

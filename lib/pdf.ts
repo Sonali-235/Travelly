@@ -87,6 +87,7 @@ export async function buildItineraryPdf(
   const brand = rgb(0.145, 0.388, 0.922);
   const verified = rgb(0.086, 0.639, 0.29);
   const muted = rgb(0.42, 0.45, 0.5);
+  const warnColor = rgb(0.706, 0.325, 0.035);
 
   await writeText(state, "Travelly", { size: 20, bold: true, color: brand, gap: 26 });
   await writeText(state, `${destination.name}, ${destination.state}`, { size: 14, bold: true, gap: 20 });
@@ -101,12 +102,23 @@ export async function buildItineraryPdf(
   await writeText(state, itinerary.tripOverview, { size: 10, gap: 13 });
   await writeSpacer(state, 10);
 
+  if (plan === "plus" && destination.verified.smartWarnings.length > 0) {
+    await writeText(state, "Smart warnings", { size: 12, bold: true, color: warnColor, gap: 16 });
+    for (const w of destination.verified.smartWarnings) {
+      await writeText(state, `${w.type}: ${w.message}`, { size: 10, gap: 13 });
+    }
+    await writeSpacer(state, 10);
+  }
+
   for (const day of itinerary.days) {
     await ensureSpace(state, 20);
     await writeText(state, `Day ${day.day}: ${day.title}`, { size: 12, bold: true, gap: 16 });
     await writeText(state, `Morning: ${day.morning}`, { size: 10, gap: 13 });
     await writeText(state, `Afternoon: ${day.afternoon}`, { size: 10, gap: 13 });
     await writeText(state, `Evening: ${day.evening}`, { size: 10, gap: 13 });
+    if (day.whyThisPlan) {
+      await writeText(state, `Why this plan: ${day.whyThisPlan}`, { size: 9, color: muted, gap: 12 });
+    }
     await writeSpacer(state, 8);
   }
 
@@ -125,6 +137,14 @@ export async function buildItineraryPdf(
     await writeText(state, `• ${t}`, { size: 10, gap: 13 });
   }
 
+  if (itinerary.photographySuggestions.length > 0) {
+    await writeSpacer(state, 10);
+    await writeText(state, "Photography spots", { size: 12, bold: true, gap: 16 });
+    for (const p of itinerary.photographySuggestions) {
+      await writeText(state, `• ${p}`, { size: 10, gap: 13 });
+    }
+  }
+
   if (plan === "plus") {
     await writeSpacer(state, 14);
     await writeText(state, "Verified information", { size: 12, bold: true, color: verified, gap: 16 });
@@ -136,6 +156,14 @@ export async function buildItineraryPdf(
           size: 9,
           gap: 12,
         });
+      }
+    }
+
+    if (destination.verified.restaurants.length > 0) {
+      await writeSpacer(state, 6);
+      await writeText(state, "Restaurants", { size: 10, bold: true, gap: 13 });
+      for (const r of destination.verified.restaurants) {
+        await writeText(state, `${r.name} — ${r.cuisine} — ${r.priceRange}`, { size: 9, gap: 12 });
       }
     }
 
@@ -153,6 +181,32 @@ export async function buildItineraryPdf(
       for (const c of destination.verified.emergencyContacts) {
         await writeText(state, `${c.label}: ${c.number}`, { size: 9, gap: 12 });
       }
+    }
+
+    if (destination.verified.localFood.length > 0) {
+      await writeSpacer(state, 6);
+      await writeText(state, "Local food to try", { size: 10, bold: true, gap: 13 });
+      await writeText(state, destination.verified.localFood.join(", "), { size: 9, gap: 12 });
+    }
+
+    if (destination.verified.shopping.length > 0) {
+      await writeSpacer(state, 6);
+      await writeText(state, "Shopping", { size: 10, bold: true, gap: 13 });
+      for (const s of destination.verified.shopping) {
+        await writeText(state, `${s.name} — ${s.specialty}`, { size: 9, gap: 12 });
+      }
+    }
+
+    if (destination.verified.transportTips) {
+      await writeSpacer(state, 6);
+      await writeText(state, "Transport tips", { size: 10, bold: true, gap: 13 });
+      await writeText(state, destination.verified.transportTips, { size: 9, gap: 12 });
+    }
+
+    if (destination.verified.permits) {
+      await writeSpacer(state, 6);
+      await writeText(state, "Permits", { size: 10, bold: true, gap: 13 });
+      await writeText(state, destination.verified.permits, { size: 9, gap: 12 });
     }
   }
 
