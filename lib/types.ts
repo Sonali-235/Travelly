@@ -12,8 +12,8 @@ export const PLAN_LABELS: Record<PlanTier, string> = {
 };
 
 export const REGENERATION_LIMITS: Record<PlanTier, number> = {
-  explorer: 1,
-  plus: 2,
+  explorer: 2,
+  plus: 4,
 };
 
 // Customer can only request a regeneration within this many days of the

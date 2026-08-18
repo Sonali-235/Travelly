@@ -190,7 +190,7 @@ function EditorContent() {
           {/* Hotels */}
           <section className="rounded-xl2 border border-line bg-surface p-4 shadow-soft">
             <RepeatableRows
-              label="Hotels"
+              label="Hotels/Homestays"
               items={verified.hotels}
               onChange={(v) => updateVerified("hotels", v)}
               emptyItem={{ name: "", category: "mid-range", pricePerNight: "", contact: "", mapsQuery: "" }}
@@ -199,7 +199,7 @@ function EditorContent() {
                 { key: "category", label: "Category", type: "select", options: ["budget", "mid-range", "luxury"] },
                 { key: "pricePerNight", label: "Price / night", placeholder: "₹3,500 – ₹5,500" },
                 { key: "contact", label: "Contact", placeholder: "+91-..." },
-                { key: "mapsQuery", label: "Maps search text", placeholder: "Hotel name + city" },
+                { key: "mapsQuery", label: "Location", placeholder: "Hotel name + city" },
               ]}
             />
           </section>
@@ -207,7 +207,7 @@ function EditorContent() {
           {/* Restaurants */}
           <section className="rounded-xl2 border border-line bg-surface p-4 shadow-soft">
             <RepeatableRows
-              label="Restaurants"
+              label="Restaurants/Food spots"
               items={verified.restaurants}
               onChange={(v) => updateVerified("restaurants", v)}
               emptyItem={{ name: "", cuisine: "", priceRange: "", mapsQuery: "" }}
@@ -215,7 +215,7 @@ function EditorContent() {
                 { key: "name", label: "Name", wide: true },
                 { key: "cuisine", label: "Cuisine" },
                 { key: "priceRange", label: "Price range", placeholder: "₹300 – ₹500 for two" },
-                { key: "mapsQuery", label: "Maps search text" },
+                { key: "mapsQuery", label: "Location" },
               ]}
             />
           </section>
@@ -238,7 +238,7 @@ function EditorContent() {
                 { key: "name", label: "Name", wide: true },
                 { key: "entryFee", label: "Entry fee", placeholder: "₹50 or Free" },
                 { key: "openingHours", label: "Opening hours" },
-                { key: "mapsQuery", label: "Maps search text" },
+                { key: "mapsQuery", label: "Location" },
                 { key: "photographyAllowed", label: "Photography allowed", type: "checkbox" },
                 { key: "notes", label: "Notes", wide: true },
               ]}

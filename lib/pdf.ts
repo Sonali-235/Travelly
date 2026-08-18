@@ -150,7 +150,7 @@ export async function buildItineraryPdf(
     await writeText(state, "Verified information", { size: 12, bold: true, color: verified, gap: 16 });
 
     if (destination.verified.hotels.length > 0) {
-      await writeText(state, "Hotels", { size: 10, bold: true, gap: 13 });
+      await writeText(state, "Hotels/Homestays", { size: 10, bold: true, gap: 13 });
       for (const h of destination.verified.hotels) {
         await writeText(state, `${h.name} (${h.category}) — ${h.pricePerNight} — ${h.contact}`, {
           size: 9,
@@ -161,7 +161,7 @@ export async function buildItineraryPdf(
 
     if (destination.verified.restaurants.length > 0) {
       await writeSpacer(state, 6);
-      await writeText(state, "Restaurants", { size: 10, bold: true, gap: 13 });
+      await writeText(state, "Restaurants/Food spots", { size: 10, bold: true, gap: 13 });
       for (const r of destination.verified.restaurants) {
         await writeText(state, `${r.name} — ${r.cuisine} — ${r.priceRange}`, { size: 9, gap: 12 });
       }

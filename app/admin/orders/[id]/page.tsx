@@ -97,6 +97,7 @@ export default function AdminOrderDetailPage() {
       });
       if (!res.ok) throw new Error("Could not publish.");
       router.push("/admin/orders");
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setBusy(null);

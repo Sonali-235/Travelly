@@ -78,7 +78,7 @@ export function ItineraryDisplay({
       {showVerifiedExtras && (
         <section>
           <div className="mb-3 flex items-center gap-2">
-            <h2 className="font-display text-lg font-semibold text-ink">Verified stays</h2>
+            <h2 className="font-display text-lg font-semibold text-ink">Verified stays (hotels/homestays)</h2>
             <VerifiedBadge />
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -105,7 +105,7 @@ export function ItineraryDisplay({
       {showVerifiedExtras && destination.verified.restaurants.length > 0 && (
         <section>
           <div className="mb-3 flex items-center gap-2">
-            <h2 className="font-display text-lg font-semibold text-ink">Verified restaurants</h2>
+            <h2 className="font-display text-lg font-semibold text-ink">Verified restaurants/food spots</h2>
             <VerifiedBadge />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

@@ -41,8 +41,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         {
           error:
             order.plan === "plus"
-              ? "You've used both free regenerations for this trip."
-              : "Explorer plan includes 1 free regeneration, already used. Upgrade to Plus for a second try.",
+              ? "You've used all 4 free regenerations for this trip."
+              : "Explorer plan includes 2 free regenerations, both used. Upgrade to Plus for more.",
         },
         { status: 403 }
       );

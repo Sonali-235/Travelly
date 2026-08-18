@@ -20,6 +20,11 @@ export default function AdminOrdersPage() {
 
   useEffect(load, []);
 
+  useEffect(() => {
+    window.addEventListener("focus", load);
+    return () => window.removeEventListener("focus", load);
+  }, []);
+
   return (
     <AdminHeader>
       <div className="flex items-center justify-between">
@@ -56,6 +61,12 @@ export default function AdminOrdersPage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
+                {o.status === "delivered" && o.satisfactionRating && (
+                  <span className="text-xs text-yellow-600">
+                    {"★".repeat(o.satisfactionRating)}
+                    {"☆".repeat(5 - o.satisfactionRating)}
+                  </span>
+                )}
                 <StatusBadge status={o.status} />
                 <span className="text-xs font-medium text-brand">Review & edit →</span>
               </div>

@@ -31,6 +31,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         tripRequest: order.tripRequest,
         itinerary: order.itinerary,
         regenerationsUsed: order.regenerationsUsed,
+        satisfactionRating: order.satisfactionRating,
+        satisfactionComment: order.satisfactionComment,
         destination,
         createdAt: order.createdAt,
       },
