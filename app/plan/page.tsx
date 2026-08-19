@@ -146,29 +146,36 @@ export default function PlanPage() {
             </select>
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Departure city">
-              <input
-                required
-                type="text"
-                placeholder="e.g. Bhubaneswar"
-                value={form.departureCity}
-                onChange={(e) => update("departureCity", e.target.value)}
-                className="input"
-              />
-            </Field>
-            <Field label="Number of days">
-              <input
-                required
-                type="number"
-                min={1}
-                max={14}
-                value={form.days}
-                onChange={(e) => update("days", Number(e.target.value))}
-                className="input"
-              />
-            </Field>
-          </div>
+          <Field label="Departure city">
+            <input
+              required
+              type="text"
+              placeholder="e.g. Bhubaneswar"
+              value={form.departureCity}
+              onChange={(e) => update("departureCity", e.target.value)}
+              className="input"
+            />
+          </Field>
+
+          <Field label="Trip duration">
+            <div className="grid grid-cols-4 gap-2">
+              {[3, 5, 7, 9].map((d) => (
+                <button
+                  type="button"
+                  key={d}
+                  onClick={() => update("days", d)}
+                  className={`rounded-xl2 border p-3 text-center transition ${
+                    form.days === d
+                      ? "border-brand bg-brand-light"
+                      : "border-line bg-surface hover:border-brand/40"
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-ink">{d} Days</p>
+                  <p className="text-xs text-muted">{d - 1} Nights</p>
+                </button>
+              ))}
+            </div>
+          </Field>
 
           <Field label="Start date">
             <input

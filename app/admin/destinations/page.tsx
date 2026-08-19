@@ -67,6 +67,12 @@ export default function AdminDestinationsPage() {
             </div>
             <div className="flex gap-3">
               <Link
+                href={`/admin/destinations/${d.id}/templates`}
+                className="text-sm font-medium text-verified hover:underline"
+              >
+                Templates
+              </Link>
+              <Link
                 href={`/admin/destinations/editor?id=${d.id}`}
                 className="text-sm font-medium text-brand hover:underline"
               >

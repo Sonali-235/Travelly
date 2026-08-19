@@ -130,3 +130,39 @@ export async function generateItineraryWithGemini(
     throw new Error("Could not parse Gemini's response as JSON. Raw response: " + cleaned.slice(0, 500));
   }
 }
+
+/**
+ * Builds a representative TripRequest for pre-generating a template. Only
+ * destinationId, days, budgetStyle, and pace are what templates actually
+ * match on — everything else here is a sensible generic default, since a
+ * template can't know a specific customer's departure city, exact dates, or
+ * free-text preferences ahead of time. That's the real trade-off of
+ * pre-generation: instant delivery for the common case, at the cost of a
+ * few personalization touches that only live generation (regeneration) can
+ * fill in — travel-mode-specific tips and a customer's own must-visit
+ * requests won't be reflected in a template.
+ */
+export function buildTemplateTripRequest(
+  destinationId: string,
+  days: number,
+  budgetStyle: TripRequest["budgetStyle"],
+  pace: TripRequest["pace"]
+): TripRequest {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() + 30); // a representative near-future date
+  return {
+    destinationId,
+    departureCity: "a nearby major city",
+    days,
+    startDate: startDate.toISOString().slice(0, 10),
+    adults: 2,
+    children: 0,
+    infants: 0,
+    budgetStyle,
+    pace,
+    travelMode: "train",
+    mustVisit: "",
+    placesToAvoid: "",
+    additionalPreferences: "",
+  };
+}

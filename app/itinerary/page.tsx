@@ -173,7 +173,10 @@ function ItineraryContent() {
                 Download as text
               </button>
             </div>
-            <EmailItinerary orderId={order.id} />
+            <ShareToWhatsApp
+              orderId={order.id}
+              destinationName={`${order.destination.name}, ${order.destination.state}`}
+            />
 
             {order.status === "delivered" ? (
               <div className="mx-auto mt-8 max-w-sm rounded-xl2 border border-brand/30 bg-brand-light p-4 text-center">
@@ -237,42 +240,67 @@ function ItineraryContent() {
   );
 }
 
-function EmailItinerary({ orderId }: { orderId: string }) {
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [emailError, setEmailError] = useState("");
+function ShareToWhatsApp({
+  orderId,
+  destinationName,
+}: {
+  orderId: string;
+  destinationName: string;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  async function handleSend() {
-    setSending(true);
-    setEmailError("");
+  async function handleShare() {
+    setLoading(true);
+    setError("");
+    const pdfUrl = `${window.location.origin}/api/orders/${orderId}/pdf`;
+    const message = `My Travelly itinerary for ${destinationName}`;
+
     try {
-      const res = await fetch(`/api/orders/${orderId}/email`, { method: "POST" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || "Could not send the email.");
+      // Best case (most phones): share the actual PDF file straight into
+      // WhatsApp via the native share sheet.
+      const canShareFiles =
+        typeof navigator.share === "function" && typeof navigator.canShare === "function";
+
+      if (canShareFiles) {
+        const res = await fetch(pdfUrl);
+        if (!res.ok) throw new Error("Could not prepare the PDF.");
+        const blob = await res.blob();
+        const file = new File([blob], `travelly-${destinationName}.pdf`, {
+          type: "application/pdf",
+        });
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: message, text: message });
+          return;
+        }
       }
-      setSent(true);
+
+      // Fallback (desktop browsers, or file-sharing unsupported): open
+      // WhatsApp with a pre-filled message containing the download link —
+      // WhatsApp's own click-to-chat links can't attach a file directly,
+      // only text, so this is the best available fallback.
+      const waText = encodeURIComponent(`${message}\n${pdfUrl}`);
+      window.open(`https://wa.me/?text=${waText}`, "_blank");
     } catch (err) {
-      setEmailError(err instanceof Error ? err.message : "Something went wrong.");
+      // Ignore the user simply cancelling the native share sheet.
+      if (err instanceof Error && err.name === "AbortError") return;
+      setError(err instanceof Error ? err.message : "Could not share right now.");
     } finally {
-      setSending(false);
+      setLoading(false);
     }
   }
 
   return (
     <div className="mt-3 text-center">
-      {!sent ? (
-        <button
-          onClick={handleSend}
-          disabled={sending}
-          className="text-sm font-medium text-brand hover:underline disabled:opacity-60"
-        >
-          {sending ? "Sending…" : "Email me this itinerary"}
-        </button>
-      ) : (
-        <p className="text-sm text-verified">Sent! Check your inbox.</p>
-      )}
-      {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
+      <button
+        onClick={handleShare}
+        disabled={loading}
+        className="text-sm font-medium text-brand hover:underline disabled:opacity-60"
+      >
+        {loading ? "Preparing…" : "Send via WhatsApp"}
+      </button>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );
 }

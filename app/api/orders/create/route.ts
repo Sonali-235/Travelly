@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDestinationById } from "@/lib/destinations-db";
 import { generateItineraryWithGemini } from "@/lib/gemini";
-import { createOrder, updateOrderStatus } from "@/lib/orders-db";
+import { approveOrder, createOrder, updateOrderStatus } from "@/lib/orders-db";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getCurrentUser } from "@/lib/supabase-server";
+import { findApprovedTemplate } from "@/lib/templates-db";
 import { CustomerInfo, PlanTier, TripRequest } from "@/lib/types";
 
-// Give this route extra time — it waits for the AI generation to finish
-// before responding, so the order lands in "under_review" (with a draft
-// ready for admin) immediately rather than needing a second request.
-// 60s is the max on Vercel's free tier.
+// Give this route extra time — the live-generation fallback path waits for
+// AI to finish before responding. The instant-template path (the common
+// case once templates exist) returns almost immediately.
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
@@ -39,11 +39,29 @@ export async function POST(req: NextRequest) {
 
     const order = await createOrder({ userId: user.id, trip, customer, plan, paymentId });
 
-    // Kick off AI generation right away so a draft is ready by the time
-    // admin reviews it — but never let a generation failure block the
-    // order itself from having been placed successfully. The order stays
-    // "under_review" the whole time (with or without a draft yet) — admin
-    // can trigger generation manually from the review page as a fallback.
+    // 1. Instant path: an admin-approved template matching destination +
+    // days + budget style + pace already exists — use it immediately, no
+    // waiting, no per-order admin review (the template itself was already
+    // reviewed once). This is the path most orders should take once a
+    // destination's common combinations have been pre-generated.
+    try {
+      const template = await findApprovedTemplate(
+        trip.destinationId,
+        trip.days,
+        trip.budgetStyle,
+        trip.pace
+      );
+      if (template?.itinerary) {
+        await approveOrder(order.id, template.itinerary);
+        return NextResponse.json({ orderId: order.id });
+      }
+    } catch (templateError) {
+      console.error("Template lookup failed for order", order.id, templateError);
+      // Fall through to live generation below rather than failing the order.
+    }
+
+    // 2. Fallback path: no matching template yet — generate live and put it
+    // through the normal admin-review flow, exactly as before this feature.
     try {
       const destination = await getDestinationById(trip.destinationId);
       if (destination) {
