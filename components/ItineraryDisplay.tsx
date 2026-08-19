@@ -61,7 +61,7 @@ export function ItineraryDisplay({
                 {d.day}
               </span>
               <h3 className="font-display text-base font-semibold text-ink">{d.title}</h3>
-              <div className="mt-2 space-y-2 text-sm">
+              <div className="mt-2 space-y-3 text-sm">
                 <TimeBlock label="Morning" icon="sunrise" text={d.morning} />
                 <TimeBlock label="Afternoon" icon="sun" text={d.afternoon} />
                 <TimeBlock label="Evening" icon="sunset" text={d.evening} />
@@ -278,11 +278,9 @@ function TimeBlock({
   text: string;
 }) {
   return (
-    <div className="flex gap-2">
-      <span className="w-16 shrink-0 text-xs font-medium uppercase tracking-wide text-muted">
-        {label}
-      </span>
-      <p className="text-ink/80">{text}</p>
+    <div>
+      <span className="text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
+      <p className="mt-0.5 text-ink/80">{text}</p>
     </div>
   );
 }
