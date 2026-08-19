@@ -32,6 +32,7 @@ export default function PlanPage() {
   const [loadingDestinations, setLoadingDestinations] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [formError, setFormError] = useState("");
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [form, setForm] = useState<TripRequest>({
     destinationId: "",
     departureCity: "",
@@ -73,7 +74,7 @@ export default function PlanPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
     if (!form.destinationId) return;
@@ -86,6 +87,29 @@ export default function PlanPage() {
     if (!form.departureCity.trim()) {
       setFormError("Please enter a departure city.");
       return;
+    }
+
+    setCheckingAvailability(true);
+    try {
+      const params = new URLSearchParams({
+        destinationId: form.destinationId,
+        days: String(form.days),
+        budgetStyle: form.budgetStyle,
+        pace: form.pace,
+      });
+      const res = await fetch(`/api/templates/availability?${params}`, { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok || !data.available) {
+        setFormError(
+          "This exact combination (duration, budget style, and pace) isn't available for this destination yet. Try a different trip duration, budget style, or pace — or contact us to request it."
+        );
+        return;
+      }
+    } catch {
+      setFormError("Could not check availability right now. Please try again.");
+      return;
+    } finally {
+      setCheckingAvailability(false);
     }
 
     sessionStorage.setItem("travelly_trip_request", JSON.stringify(form));
@@ -290,9 +314,10 @@ export default function PlanPage() {
 
           <button
             type="submit"
-            className="w-full rounded-full bg-brand px-6 py-3 text-sm font-medium text-white shadow-soft transition hover:bg-brand-dark"
+            disabled={checkingAvailability}
+            className="w-full rounded-full bg-brand px-6 py-3 text-sm font-medium text-white shadow-soft transition hover:bg-brand-dark disabled:opacity-60"
           >
-            Continue to plan selection
+            {checkingAvailability ? "Checking availability…" : "Continue to plan selection"}
           </button>
         </form>
       </main>

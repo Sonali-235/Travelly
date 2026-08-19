@@ -31,6 +31,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [error, setError] = useState("");
+  const [available, setAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -62,6 +63,21 @@ export default function CheckoutPage() {
       .catch(() => {
         // Non-fatal — checkout can proceed without the display name.
       });
+
+    // Second safety gate — re-checks in case this tab sat open a while, or
+    // an admin removed a template after the planner form already checked.
+    // Payment must never be possible for a combination that can't actually
+    // be delivered.
+    const params = new URLSearchParams({
+      destinationId: parsedTrip.destinationId,
+      days: String(parsedTrip.days),
+      budgetStyle: parsedTrip.budgetStyle,
+      pace: parsedTrip.pace,
+    });
+    fetch(`/api/templates/availability?${params}`, { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => setAvailable(!!data.available))
+      .catch(() => setAvailable(false));
   }, [router]);
 
   if (!trip || checkingAuth) return null;
@@ -87,6 +103,10 @@ export default function CheckoutPage() {
 
   async function handlePay() {
     setError("");
+    if (available === false) {
+      setError("This combination is no longer available. Please go back and pick a different trip duration, budget style, or pace.");
+      return;
+    }
     if (!validateFields()) return;
     setLoading(true);
 
@@ -233,13 +253,23 @@ export default function CheckoutPage() {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {available === false && (
+            <p className="text-sm text-red-600">
+              This exact combination isn't available right now — go back and try a different
+              duration, budget style, or pace.
+            </p>
+          )}
+
           <button
             onClick={handlePay}
-            disabled={loading}
+            disabled={loading || available === false}
             className="w-full rounded-full bg-brand px-6 py-3 text-sm font-medium text-white shadow-soft transition hover:bg-brand-dark disabled:opacity-60"
           >
             {loading
               ? "Processing…"
+              : available === false
+              ? "Not available"
               : SKIP_PAYMENT
               ? `Continue (test mode — no charge) · ₹${PLAN_PRICES[plan]}`
               : `Pay ₹${PLAN_PRICES[plan]} securely`}
