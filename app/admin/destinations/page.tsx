@@ -5,8 +5,10 @@ import Link from "next/link";
 import { AdminHeader } from "@/components/AdminHeader";
 import { Destination } from "@/lib/types";
 
+type DestinationWithTemplateCount = Destination & { approvedTemplateCount: number };
+
 export default function AdminDestinationsPage() {
-  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [destinations, setDestinations] = useState<DestinationWithTemplateCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -62,6 +64,11 @@ export default function AdminDestinationsPage() {
                     Placeholder data
                   </span>
                 )}
+                {d.approvedTemplateCount === 0 && (
+                  <span className="rounded-full border border-warn-border bg-warn-bg px-2 py-0.5 text-xs text-warn">
+                    Not bookable — 0 approved combinations
+                  </span>
+                )}
               </div>
               <p className="mt-0.5 text-xs text-muted">{d.tagline}</p>
             </div>
@@ -70,7 +77,7 @@ export default function AdminDestinationsPage() {
                 href={`/admin/destinations/${d.id}/templates`}
                 className="text-sm font-medium text-verified hover:underline"
               >
-                Templates
+                Templates ({d.approvedTemplateCount})
               </Link>
               <Link
                 href={`/admin/destinations/editor?id=${d.id}`}

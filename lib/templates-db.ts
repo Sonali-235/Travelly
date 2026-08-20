@@ -36,6 +36,21 @@ function rowToTemplate(row: TemplateRow): ItineraryTemplate {
   };
 }
 
+export async function getApprovedTemplateCounts(): Promise<Record<string, number>> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("itinerary_templates")
+    .select("destination_id")
+    .eq("status", "approved");
+
+  if (error) throw new Error(`Could not load template counts: ${error.message}`);
+  const counts: Record<string, number> = {};
+  for (const row of data as { destination_id: string }[]) {
+    counts[row.destination_id] = (counts[row.destination_id] || 0) + 1;
+  }
+  return counts;
+}
+
 export async function listTemplatesForDestination(
   destinationId: string
 ): Promise<ItineraryTemplate[]> {

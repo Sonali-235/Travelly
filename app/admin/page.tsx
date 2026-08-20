@@ -2,13 +2,19 @@ import Link from "next/link";
 import { AdminHeader } from "@/components/AdminHeader";
 import { listDestinations } from "@/lib/destinations-db";
 import { listAllOrders } from "@/lib/orders-db";
+import { getApprovedTemplateCounts } from "@/lib/templates-db";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const [destinations, orders] = await Promise.all([listDestinations(), listAllOrders()]);
+  const [destinations, orders, templateCounts] = await Promise.all([
+    listDestinations(),
+    listAllOrders(),
+    getApprovedTemplateCounts(),
+  ]);
 
   const sampleDataCount = destinations.filter((d) => d.verified.isSampleData).length;
+  const notBookableCount = destinations.filter((d) => !templateCounts[d.id]).length;
   const readyOrders = orders.filter((o) => o.status === "ready" || o.status === "delivered").length;
   // Every order in this table exists only because payment succeeded — there's
   // no "awaiting payment" state anymore, so no filtering needed here.
@@ -24,12 +30,17 @@ export default async function AdminDashboard() {
         <StatCard label="Completed itineraries" value={readyOrders} />
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <StatCard label="Revenue collected (est.)" value={`₹${totalRevenue}`} />
         <StatCard
           label="Destinations still using placeholder data"
           value={sampleDataCount}
           warn={sampleDataCount > 0}
+        />
+        <StatCard
+          label="Destinations not bookable yet"
+          value={notBookableCount}
+          warn={notBookableCount > 0}
         />
       </div>
 
@@ -40,6 +51,18 @@ export default async function AdminDashboard() {
           shouldn't see these yet —{" "}
           <Link href="/admin/destinations" className="font-medium underline">
             fix them in Destinations
+          </Link>
+          .
+        </div>
+      )}
+
+      {notBookableCount > 0 && (
+        <div className="mt-3 rounded-xl2 border border-warn-border bg-warn-bg p-4 text-sm text-warn">
+          {notBookableCount} destination{notBookableCount > 1 ? "s have" : " has"} zero approved
+          trip combinations — customers can't book {notBookableCount > 1 ? "them" : "it"} at all
+          until you generate and approve at least one in{" "}
+          <Link href="/admin/destinations" className="font-medium underline">
+            Destinations → Templates
           </Link>
           .
         </div>

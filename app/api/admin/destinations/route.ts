@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listDestinations, upsertDestination } from "@/lib/destinations-db";
+import { getApprovedTemplateCounts } from "@/lib/templates-db";
 import { Destination } from "@/lib/types";
 
 const NO_STORE_HEADERS = { "Cache-Control": "no-store, must-revalidate" };
@@ -8,8 +9,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const destinations = await listDestinations();
-    return NextResponse.json(destinations, { headers: NO_STORE_HEADERS });
+    const [destinations, templateCounts] = await Promise.all([
+      listDestinations(),
+      getApprovedTemplateCounts(),
+    ]);
+    const withCounts = destinations.map((d) => ({
+      ...d,
+      approvedTemplateCount: templateCounts[d.id] || 0,
+    }));
+    return NextResponse.json(withCounts, { headers: NO_STORE_HEADERS });
   } catch (err) {
     console.error(err);
     return NextResponse.json(

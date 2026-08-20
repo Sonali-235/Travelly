@@ -111,8 +111,14 @@ function EditorContent() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Could not save.");
       }
-      setSavedMsg("Saved!");
-      setTimeout(() => router.push("/admin/destinations"), 600);
+      setSavedMsg(isNew ? "Saved! Now let's set up its bookable trip combinations…" : "Saved!");
+      setTimeout(
+        () =>
+          router.push(
+            isNew ? `/admin/destinations/${id.trim().toLowerCase()}/templates` : "/admin/destinations"
+          ),
+        800
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save.");
     } finally {

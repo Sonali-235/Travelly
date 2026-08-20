@@ -145,6 +145,19 @@ export default function DestinationTemplatesPage() {
         {TOTAL_COMBINATIONS} generated (as drafts or approved).
       </p>
 
+      {!loading && approvedCount === 0 && (
+        <div className="mt-4 rounded-xl2 border border-warn-border bg-warn-bg p-4">
+          <p className="text-sm font-medium text-warn">
+            ⚠ This destination isn't bookable yet
+          </p>
+          <p className="mt-1 text-xs text-ink/70">
+            With zero approved combinations, every customer who tries to plan a trip here will be
+            blocked at checkout — there's nothing to instantly deliver. Generate and approve at
+            least one combination below before sharing this destination.
+          </p>
+        </div>
+      )}
+
       {missingCount > 0 && (
         <div className="mt-4 rounded-xl2 border border-line bg-surface p-4 shadow-soft">
           <div className="flex items-center justify-between">
