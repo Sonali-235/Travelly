@@ -55,6 +55,14 @@ export default function DestinationTemplatesPage() {
     load();
   }, [destinationId]);
 
+  useEffect(() => {
+    function refetch() {
+      load();
+    }
+    window.addEventListener("focus", refetch);
+    return () => window.removeEventListener("focus", refetch);
+  }, [destinationId]);
+
   function findTemplate(days: number, budgetStyle: BudgetStyle, pace: TravelPace, list = templates) {
     return list.find((t) => t.days === days && t.budgetStyle === budgetStyle && t.pace === pace);
   }

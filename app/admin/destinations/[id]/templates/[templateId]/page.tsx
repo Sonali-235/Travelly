@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { AdminHeader } from "@/components/AdminHeader";
 import { ItineraryEditor } from "@/components/admin/ItineraryEditor";
-import { GeneratedItinerary } from "@/lib/types";
+import { Destination, GeneratedItinerary } from "@/lib/types";
 
 interface TemplateData {
   id: string;
@@ -24,6 +24,7 @@ export default function TemplateDetailPage() {
   const templateId = params.templateId as string;
 
   const [template, setTemplate] = useState<TemplateData | null>(null);
+  const [destination, setDestination] = useState<Destination | null>(null);
   const [itinerary, setItinerary] = useState<GeneratedItinerary | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -32,12 +33,17 @@ export default function TemplateDetailPage() {
 
   function load() {
     setLoading(true);
-    fetch(`/api/admin/templates?destinationId=${destinationId}`, { cache: "no-store" })
-      .then((res) => res.json())
-      .then((all: TemplateData[]) => {
-        const found = all.find((t) => t.id === templateId);
+    Promise.all([
+      fetch(`/api/admin/templates?destinationId=${destinationId}`, { cache: "no-store" }).then(
+        (res) => res.json()
+      ),
+      fetch("/api/admin/destinations", { cache: "no-store" }).then((res) => res.json()),
+    ])
+      .then(([templates, destinations]: [TemplateData[], Destination[]]) => {
+        const found = templates.find((t) => t.id === templateId);
         setTemplate(found ?? null);
         setItinerary(found?.itinerary ?? null);
+        setDestination(destinations.find((d) => d.id === destinationId) ?? null);
       })
       .finally(() => setLoading(false));
   }
@@ -137,8 +143,49 @@ export default function TemplateDetailPage() {
       </h1>
       <p className="mt-1 text-sm text-muted">
         This will be delivered instantly to any customer whose order matches this exact
-        combination — review it as carefully as you would a real order.
+        combination — review it as carefully as you would a real order. It's used for{" "}
+        <strong>both</strong> Explorer (₹49) and Plus (₹99) orders — Plus customers additionally
+        see the verified info below, automatically, with no separate template needed.
       </p>
+
+      {destination && (
+        <section className="mt-4 rounded-xl2 border border-verified-border bg-verified-bg p-4">
+          <h2 className="text-sm font-semibold text-verified">
+            Verified hotels, attractions & locations (from the destination record)
+          </h2>
+          <p className="mt-1 text-xs text-ink/70">
+            This isn't edited here — it comes from the destination itself, and Google Maps
+            location links only appear to customers, not in this admin view.{" "}
+            <Link href={`/admin/destinations/editor?id=${destinationId}`} className="underline">
+              Edit hotels/attractions/locations for {destination.name}
+            </Link>
+            .
+          </p>
+          <div className="mt-2 space-y-1 text-xs text-ink/80">
+            {destination.verified.hotels.length > 0 && (
+              <p>
+                <strong>Hotels/Homestays:</strong>{" "}
+                {destination.verified.hotels.map((h) => h.name).join(", ")}
+              </p>
+            )}
+            {destination.verified.attractions.length > 0 && (
+              <p>
+                <strong>Attractions:</strong>{" "}
+                {destination.verified.attractions.map((a) => a.name).join(", ")}
+              </p>
+            )}
+            {destination.verified.hotels.length === 0 && destination.verified.attractions.length === 0 && (
+              <p className="text-warn">
+                No hotels or attractions added to this destination yet — Plus customers will see
+                an empty verified section until you add some.
+              </p>
+            )}
+            {destination.verified.isSampleData && (
+              <p className="font-medium text-warn">⚠ This destination still has placeholder data.</p>
+            )}
+          </div>
+        </section>
+      )}
 
       {itinerary ? (
         <div className="mt-6">
